@@ -1,25 +1,25 @@
-"use client"
-import { ChevronRight, Plus, FolderOpen, Settings, Menu, ChevronDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import { getProjects } from "@/lib/storage"
-import { mockProjects, type Project } from "@/lib/mock-data"
-import Link from "next/link"
+"use client";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { mockProjects, type Project } from "@/lib/mock-data";
+import { getProjects } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronRight, FolderOpen, Menu, Plus, Settings } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface SidebarProps {
-  collapsed: boolean
-  onToggle: () => void
-  currentProjectId?: string | null
+  collapsed: boolean;
+  onToggle: () => void;
+  currentProjectId?: string | null;
 }
 
 export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps) {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [showProjectList, setShowProjectList] = useState(false)
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [showProjectList, setShowProjectList] = useState(false);
 
   useEffect(() => {
-    const storedProjects = getProjects()
+    const storedProjects = getProjects();
     const combinedProjects = [
       ...mockProjects,
       ...storedProjects.map((p) => ({
@@ -34,9 +34,9 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       })),
-    ]
-    setProjects(combinedProjects)
-  }, [])
+    ];
+    setProjects(combinedProjects);
+  }, []);
 
   const mainMenuItems = [
     {
@@ -49,15 +49,15 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
       label: "프로젝트 목록",
       href: "/projects",
     },
-  ]
+  ];
 
   const settingsItem = {
     icon: Settings,
     label: "설정",
     href: "/settings",
-  }
+  };
 
-  const currentProject = projects.find((p) => p.id === currentProjectId)
+  const currentProject = projects.find((p) => p.id === currentProjectId);
 
   return (
     <TooltipProvider>
@@ -127,7 +127,7 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
           {/* 메인 메뉴 항목들 */}
           <nav className="flex-1 p-4 space-y-2">
             {mainMenuItems.map((item, index) => {
-              const Icon = item.icon
+              const Icon = item.icon;
 
               if (collapsed) {
                 return (
@@ -143,7 +143,7 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
                       <p>{item.label}</p>
                     </TooltipContent>
                   </Tooltip>
-                )
+                );
               }
 
               return (
@@ -153,7 +153,7 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
                     {item.label}
                   </Button>
                 </Link>
-              )
+              );
             })}
           </nav>
 
@@ -183,5 +183,5 @@ export function Sidebar({ collapsed, onToggle, currentProjectId }: SidebarProps)
         </div>
       </aside>
     </TooltipProvider>
-  )
+  );
 }

@@ -7,7 +7,7 @@ import { SidebarToggle } from "./sidebar-toggle"
 import { SidebarProjectInfo } from "./sidebar-project-info"
 import { SidebarProjectList } from "./sidebar-project-list"
 import { SidebarNav } from "./sidebar-nav"
-import { SidebarSettings } from "./sidebar-settings"
+import { SidebarProfile } from "./sidebar-profile"
 import { getProjects } from "@/lib/storage"
 import { mockProjects, type Project } from "@/lib/mock-data"
 
@@ -58,7 +58,7 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
           <SidebarProjectInfo collapsed={collapsed} project={currentProject} />
           <SidebarProjectList collapsed={collapsed} projects={projects} currentProjectId={currentProjectId} />
           <SidebarNav collapsed={collapsed} />
-          <SidebarSettings collapsed={collapsed} />
+          <SidebarProfile collapsed={collapsed} />
         </div>
       </aside>
     </TooltipProvider>
