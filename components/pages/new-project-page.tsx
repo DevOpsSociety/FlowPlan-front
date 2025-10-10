@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { ProjectForm } from "@/components/project-form"
+import { ProjectForm } from "@/components/project/project-form"
 
 interface NewProjectPageProps {
   onBack: () => void
