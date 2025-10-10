@@ -15,7 +15,17 @@ export function LoginForm() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      localStorage.setItem("auth_token", "mock_token_" + Date.now())
+      // Set auth token
+      localStorage.setItem("authToken", "mock_token_" + Date.now())
+
+      // Set mock user data
+      const mockUser = {
+        id: "1",
+        name: "사용자 이름",
+        email: "user@example.com",
+        avatar: undefined,
+      }
+      localStorage.setItem("user", JSON.stringify(mockUser))
 
       router.push("/")
     } catch (error) {
