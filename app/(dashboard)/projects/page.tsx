@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ProjectListPage } from "@/components/project-list-page"
+import { ProjectListPage } from "@/components/pages/project-list-page"
 import { getCurrentProjectId } from "@/lib/storage"
 
 export default function Projects() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { ProfilePage } from "@/components/profile-page"
+import { ProfilePage } from "@/components/pages/profile-page"
 import { getCurrentProjectId } from "@/lib/storage"
 
 export default function Profile() {
