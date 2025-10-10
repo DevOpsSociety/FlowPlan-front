@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { BarChart3, Kanban, Table } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { HierarchicalWBSTable } from "@/components/hierarchical-wbs-table"
+import { HierarchicalWBSTable } from "@/components/wbs/hierarchical-wbs-table"
 import { GanttChartView } from "@/components/project/gantt-chart-view"
 import { KanbanBoard } from "@/components/project/kanban-board"
 import { TaskDetailPanel } from "@/components/project/task-detail-panel"
