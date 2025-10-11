@@ -1,7 +1,5 @@
 "use client"
 
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { ProjectForm } from "@/components/project/project-form"
 
 interface NewProjectPageProps {
@@ -15,9 +13,6 @@ export function NewProjectPage({ onBack, onSubmit, isLoading }: NewProjectPagePr
     <div className="min-h-full bg-background">
       <div className="border-b border-border bg-card sticky top-0 z-10">
         <div className="flex items-center gap-4 p-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div>
             <h1 className="text-2xl font-bold">새 프로젝트 생성</h1>
             <p className="text-muted-foreground">AI가 도와주는 스마트한 프로젝트 계획을 시작하세요</p>

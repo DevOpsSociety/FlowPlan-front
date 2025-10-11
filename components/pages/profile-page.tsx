@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from "lucide-react"
+import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -55,9 +55,6 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
         <div className="flex items-center justify-between p-6">
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" onClick={onBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <h1 className="text-2xl font-bold">프로필</h1>
           </div>
           <div className="flex items-center space-x-2">

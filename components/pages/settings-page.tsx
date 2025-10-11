@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, User, Bell, Shield, Palette, Download, Trash2, Save } from "lucide-react"
+import { User, Bell, Shield, Palette, Download, Trash2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -55,9 +55,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="flex items-center gap-4 p-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div>
             <h1 className="text-2xl font-bold">설정</h1>
             <p className="text-muted-foreground">계정 및 애플리케이션 설정을 관리하세요</p>

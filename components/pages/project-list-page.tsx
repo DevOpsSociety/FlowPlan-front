@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Search, Filter, Calendar, Users, MoreVertical, Eye, Edit, Trash2, FolderOpen } from "lucide-react"
+import { Search, Filter, Calendar, Users, MoreVertical, Eye, Edit, Trash2, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -90,9 +90,6 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-card">
         <div className="flex items-center gap-4 p-6">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
           <div>
             <h1 className="text-2xl font-bold">프로젝트 목록</h1>
             <p className="text-muted-foreground">모든 프로젝트를 관리하고 추적하세요</p>
