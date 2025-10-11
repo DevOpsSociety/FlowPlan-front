@@ -379,6 +379,7 @@ export interface HierarchicalWBSTask {
   progress: number
   status: "todo" | "in-progress" | "done" | "blocked"
   dependencies: string[]
+  depth: number // 0: 최상위(1.0), 1: 1단계 하위(1.1), 최대 깊이 2레벨
   subTasks: HierarchicalWBSTask[]
 }
 
@@ -393,6 +394,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
     progress: 85,
     status: "in-progress",
     dependencies: [],
+    depth: 0,
     subTasks: [
       {
         id: "1.1",
@@ -404,32 +406,8 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 100,
         status: "done",
         dependencies: [],
-        subTasks: [
-          {
-            id: "1.1.1",
-            name: "1.1.1 사용자 요구사항 수집",
-            assignee: "기획자",
-            startDate: "2024-01-01",
-            endDate: "2024-01-03",
-            duration: 3,
-            progress: 100,
-            status: "done",
-            dependencies: [],
-            subTasks: [],
-          },
-          {
-            id: "1.1.2",
-            name: "1.1.2 기능 명세서 작성",
-            assignee: "기획자",
-            startDate: "2024-01-04",
-            endDate: "2024-01-07",
-            duration: 4,
-            progress: 100,
-            status: "done",
-            dependencies: ["1.1.1"],
-            subTasks: [],
-          },
-        ],
+        depth: 1,
+        subTasks: [],
       },
       {
         id: "1.2",
@@ -441,32 +419,8 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 100,
         status: "done",
         dependencies: ["1.1"],
-        subTasks: [
-          {
-            id: "1.2.1",
-            name: "1.2.1 시스템 아키텍처 설계",
-            assignee: "아키텍트",
-            startDate: "2024-01-08",
-            endDate: "2024-01-10",
-            duration: 3,
-            progress: 100,
-            status: "done",
-            dependencies: [],
-            subTasks: [],
-          },
-          {
-            id: "1.2.2",
-            name: "1.2.2 데이터베이스 설계",
-            assignee: "아키텍트",
-            startDate: "2024-01-11",
-            endDate: "2024-01-14",
-            duration: 4,
-            progress: 100,
-            status: "done",
-            dependencies: ["1.2.1"],
-            subTasks: [],
-          },
-        ],
+        depth: 1,
+        subTasks: [],
       },
       {
         id: "1.3",
@@ -478,6 +432,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 60,
         status: "in-progress",
         dependencies: ["1.2"],
+        depth: 1,
         subTasks: [],
       },
     ],
@@ -492,6 +447,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
     progress: 45,
     status: "in-progress",
     dependencies: ["1"],
+    depth: 0,
     subTasks: [
       {
         id: "2.1",
@@ -503,32 +459,8 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 80,
         status: "in-progress",
         dependencies: [],
-        subTasks: [
-          {
-            id: "2.1.1",
-            name: "2.1.1 JWT 발급",
-            assignee: "백엔드 개발자",
-            startDate: "2024-01-22",
-            endDate: "2024-01-24",
-            duration: 3,
-            progress: 100,
-            status: "done",
-            dependencies: [],
-            subTasks: [],
-          },
-          {
-            id: "2.1.2",
-            name: "2.1.2 소셜 로그인 연동",
-            assignee: "백엔드 개발자",
-            startDate: "2024-01-25",
-            endDate: "2024-01-28",
-            duration: 4,
-            progress: 60,
-            status: "in-progress",
-            dependencies: ["2.1.1"],
-            subTasks: [],
-          },
-        ],
+        depth: 1,
+        subTasks: [],
       },
       {
         id: "2.2",
@@ -540,32 +472,8 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 30,
         status: "in-progress",
         dependencies: ["2.1"],
-        subTasks: [
-          {
-            id: "2.2.1",
-            name: "2.2.1 프로젝트 관리 API",
-            assignee: "백엔드 개발자",
-            startDate: "2024-01-29",
-            endDate: "2024-02-04",
-            duration: 7,
-            progress: 50,
-            status: "in-progress",
-            dependencies: [],
-            subTasks: [],
-          },
-          {
-            id: "2.2.2",
-            name: "2.2.2 작업 관리 API",
-            assignee: "백엔드 개발자",
-            startDate: "2024-02-05",
-            endDate: "2024-02-11",
-            duration: 7,
-            progress: 10,
-            status: "todo",
-            dependencies: ["2.2.1"],
-            subTasks: [],
-          },
-        ],
+        depth: 1,
+        subTasks: [],
       },
       {
         id: "2.3",
@@ -577,6 +485,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 20,
         status: "todo",
         dependencies: ["2.2"],
+        depth: 1,
         subTasks: [],
       },
     ],
@@ -591,6 +500,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
     progress: 15,
     status: "todo",
     dependencies: ["2"],
+    depth: 0,
     subTasks: [
       {
         id: "3.1",
@@ -602,6 +512,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 40,
         status: "todo",
         dependencies: [],
+        depth: 1,
         subTasks: [],
       },
       {
@@ -614,6 +525,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 10,
         status: "todo",
         dependencies: ["3.1"],
+        depth: 1,
         subTasks: [],
       },
       {
@@ -626,6 +538,7 @@ export const mockHierarchicalWBSTasks: HierarchicalWBSTask[] = [
         progress: 0,
         status: "todo",
         dependencies: ["3.2"],
+        depth: 1,
         subTasks: [],
       },
     ],
@@ -698,6 +611,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
       progress: 60,
       status: "in-progress",
       dependencies: [],
+      depth: 0,
       subTasks: [
         {
           id: "mobile-1.1",
@@ -709,6 +623,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 100,
           status: "done",
           dependencies: [],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -721,6 +636,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 80,
           status: "in-progress",
           dependencies: ["mobile-1.1"],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -733,6 +649,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 20,
           status: "todo",
           dependencies: ["mobile-1.2"],
+          depth: 1,
           subTasks: [],
         },
       ],
@@ -747,6 +664,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
       progress: 10,
       status: "todo",
       dependencies: ["mobile-1"],
+      depth: 0,
       subTasks: [
         {
           id: "mobile-2.1",
@@ -758,6 +676,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 30,
           status: "todo",
           dependencies: [],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -770,6 +689,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 0,
           status: "todo",
           dependencies: ["mobile-2.1"],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -782,6 +702,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 0,
           status: "todo",
           dependencies: ["mobile-2.2"],
+          depth: 1,
           subTasks: [],
         },
       ],
@@ -798,6 +719,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
       progress: 10,
       status: "todo",
       dependencies: [],
+      depth: 0,
       subTasks: [
         {
           id: "data-1.1",
@@ -809,6 +731,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 20,
           status: "todo",
           dependencies: [],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -821,6 +744,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 0,
           status: "todo",
           dependencies: ["data-1.1"],
+          depth: 1,
           subTasks: [],
         },
         {
@@ -833,6 +757,7 @@ export const mockProjectTasks: Record<string, HierarchicalWBSTask[]> = {
           progress: 0,
           status: "todo",
           dependencies: ["data-1.2"],
+          depth: 1,
           subTasks: [],
         },
       ],

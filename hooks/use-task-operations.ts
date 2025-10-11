@@ -134,6 +134,19 @@ export function useTaskOperations(
 
   const handleTaskAdd = useCallback(
     (parentId?: string, taskData?: Partial<HierarchicalWBSTask>) => {
+      // 부모 작업이 있는 경우 depth 체크
+      if (parentId) {
+        const parentTask = findTaskById(wbsTasks, parentId)
+        if (parentTask && parentTask.depth >= 1) {
+          toast({
+            title: "작업 추가 불가",
+            description: "최대 2단계(1.0 → 1.1)까지만 작업을 추가할 수 있습니다.",
+            variant: "destructive",
+          })
+          return
+        }
+      }
+
       const newTask: HierarchicalWBSTask = {
         id: `task-new-${Date.now()}`,
         name: taskData?.name || "새 작업",
@@ -144,6 +157,7 @@ export function useTaskOperations(
         progress: taskData?.progress || 0,
         status: taskData?.status || "todo",
         dependencies: [],
+        depth: parentId ? 1 : 0, // 부모가 있으면 depth 1, 없으면 0
         subTasks: [],
       }
 

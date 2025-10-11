@@ -208,7 +208,8 @@ function TaskRow({
                   e.stopPropagation()
                   onCreateTask(task.id)
                 }}
-                title="하위 작업 추가"
+                disabled={task.depth >= 1}
+                title={task.depth >= 1 ? "최대 2단계까지만 작업 추가 가능" : "하위 작업 추가"}
               >
                 <Plus className="h-3 w-3" />
               </Button>
