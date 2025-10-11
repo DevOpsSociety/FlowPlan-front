@@ -6,7 +6,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "generate:api": "openapi-typescript-codegen --input openapi/spec.yaml --output lib/generated --client fetch",
+    "generate:api:remote": "openapi-typescript-codegen --input $NEXT_PUBLIC_API_URL/openapi.json --output lib/generated --client fetch"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -67,6 +69,7 @@
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "openapi-typescript-codegen": "^0.29.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
