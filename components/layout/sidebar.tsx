@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { SidebarToggle } from "./sidebar-toggle"
-import { SidebarProjectInfo } from "./sidebar-project-info"
-import { SidebarProjectList } from "./sidebar-project-list"
+import { SidebarHeader } from "./sidebar-header"
+import { SidebarProjectSelector } from "./sidebar-project-selector"
 import { SidebarNav } from "./sidebar-nav"
 import { SidebarProfile } from "./sidebar-profile"
 import { getProjects } from "@/lib/storage"
@@ -43,8 +42,6 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     setCurrentProjectId(projectId)
   }, [])
 
-  const currentProject = projects.find((p) => p.id === currentProjectId)
-
   return (
     <TooltipProvider>
       <aside
@@ -54,9 +51,8 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         )}
       >
         <div className="flex flex-col h-full">
-          <SidebarToggle collapsed={collapsed} onToggle={onToggleCollapse} />
-          <SidebarProjectInfo collapsed={collapsed} project={currentProject} />
-          <SidebarProjectList collapsed={collapsed} projects={projects} currentProjectId={currentProjectId} />
+          <SidebarHeader collapsed={collapsed} onToggle={onToggleCollapse} />
+          <SidebarProjectSelector collapsed={collapsed} projects={projects} currentProjectId={currentProjectId} />
           <SidebarNav collapsed={collapsed} />
           <SidebarProfile collapsed={collapsed} />
         </div>
