@@ -2,21 +2,12 @@
 
 import { NewProjectPage } from "@/components/pages/new-project-page";
 import { saveProject } from "@/lib/storage";
-import { useRouter } from "next/navigation";
+import router from "next/router";
 import { useState } from "react";
 
 export default function NewProject() {
-  const router = useRouter();
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleBack = () => {
-    if (currentProjectId) {
-      router.push(`/project/${currentProjectId}`);
-    } else {
-      router.push("/");
-    }
-  };
 
   const handleProjectCreate = async (projectData: any) => {
     setIsLoading(true);
@@ -39,5 +30,5 @@ export default function NewProject() {
     }, 3000);
   };
 
-  return <NewProjectPage onBack={handleBack} onSubmit={handleProjectCreate} isLoading={isLoading} />;
+  return <NewProjectPage onSubmit={handleProjectCreate} isLoading={isLoading} />;
 }

@@ -1,14 +1,11 @@
-"use client"
-
-import { ProjectForm } from "@/components/project/project-form"
+import { ProjectForm } from "@/components/project/project-form";
 
 interface NewProjectPageProps {
-  onBack: () => void
-  onSubmit: (projectData: any) => void
-  isLoading?: boolean
+  onSubmit: (projectData: any) => void;
+  isLoading?: boolean;
 }
 
-export function NewProjectPage({ onBack, onSubmit, isLoading }: NewProjectPageProps) {
+export function NewProjectPage({ onSubmit, isLoading }: NewProjectPageProps) {
   return (
     <div className="min-h-full bg-background">
       <div className="border-b border-border bg-card sticky top-0 z-10">
@@ -26,5 +23,5 @@ export function NewProjectPage({ onBack, onSubmit, isLoading }: NewProjectPagePr
         </div>
       </div>
     </div>
-  )
+  );
 }

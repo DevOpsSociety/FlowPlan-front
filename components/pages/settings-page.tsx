@@ -1,22 +1,25 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { User, Bell, Shield, Palette, Download, Trash2, Save } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bell, Download, Palette, Save, Shield, Trash2, User } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useState } from "react";
 
 interface SettingsPageProps {
-  onBack: () => void
+  onBack: () => void;
 }
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
+  const { theme, setTheme } = useTheme();
+
   const [settings, setSettings] = useState({
     // 계정 설정
     name: "김철수",
@@ -32,7 +35,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     weeklyReports: false,
 
     // 개인화 설정
-    theme: "dark",
     language: "ko",
     timezone: "Asia/Seoul",
     dateFormat: "YYYY-MM-DD",
@@ -40,16 +42,20 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     // 보안 설정
     twoFactorAuth: false,
     sessionTimeout: "30",
-  })
+  });
 
   const handleSettingChange = (key: string, value: any) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-  }
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+  };
 
   const handleSave = () => {
     // 설정 저장 로직
-    console.log("Settings saved:", settings)
-  }
+    console.log("Settings saved:", settings);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -225,7 +231,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>테마</Label>
-                    <Select value={settings.theme} onValueChange={(value) => handleSettingChange("theme", value)}>
+                    <Select value={theme} onValueChange={handleThemeChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -382,5 +388,5 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
