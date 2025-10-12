@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { UserPlus, MoreVertical, Mail, Shield, Trash2, Crown } from "lucide-react"
+import { TeamManagementSkeleton } from "@/components/skeletons/team-management-skeleton"
 import { apiService } from "@/lib/api-service"
 import type { TeamMember, UserRole } from "@/lib/api-types"
 
@@ -136,6 +137,10 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
       default:
         return role
     }
+  }
+
+  if (isLoading && teamMembers.length === 0) {
+    return <TeamManagementSkeleton />
   }
 
   return (

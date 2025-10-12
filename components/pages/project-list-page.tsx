@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { mockProjects, type Project } from "@/lib/mock-data"
 import { getProjects, deleteProject } from "@/lib/storage"
+import { ProjectListSkeleton } from "@/components/skeletons/project-list-skeleton"
 
 interface ProjectListPageProps {
   onBack: () => void
@@ -20,25 +21,32 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [projects, setProjects] = useState<Project[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const storedProjects = getProjects()
-    const combinedProjects = [
-      ...mockProjects,
-      ...storedProjects.map((p) => ({
-        id: p.id,
-        name: p.title,
-        description: p.description,
-        status: "active" as const,
-        startDate: p.createdAt.split("T")[0],
-        endDate: new Date(Date.now() + p.duration * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        progress: Math.floor(Math.random() * 100), // Random progress for demo
-        teamMembers: [`팀원 ${Math.floor(Math.random() * 5) + 1}명`],
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-      })),
-    ]
-    setProjects(combinedProjects)
+    const loadProjects = () => {
+      setIsLoading(true)
+      const storedProjects = getProjects()
+      const combinedProjects = [
+        ...mockProjects,
+        ...storedProjects.map((p) => ({
+          id: p.id,
+          name: p.title,
+          description: p.description,
+          status: "active" as const,
+          startDate: p.createdAt.split("T")[0],
+          endDate: new Date(Date.now() + p.duration * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          progress: Math.floor(Math.random() * 100), // Random progress for demo
+          teamMembers: [`팀원 ${Math.floor(Math.random() * 5) + 1}명`],
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        })),
+      ]
+      setProjects(combinedProjects)
+      setIsLoading(false)
+    }
+
+    loadProjects()
   }, [])
 
   const getStatusColor = (status: string) => {
@@ -85,6 +93,10 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
     const matchesStatus = statusFilter === "all" || project.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  if (isLoading) {
+    return <ProjectListSkeleton />
+  }
 
   return (
     <div className="min-h-screen bg-background">
