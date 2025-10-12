@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { ProfileSkeleton } from "@/components/skeletons/profile-skeleton"
 
 interface ProfilePageProps {
   onBack: () => void
 }
 
 export function ProfilePage({ onBack }: ProfilePageProps) {
+  const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
     name: "김철수",
@@ -29,6 +31,15 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
   })
 
   const [editData, setEditData] = useState(profileData)
+
+  useEffect(() => {
+    // Simulate loading profile data
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -47,6 +58,10 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
 
   const handleInputChange = (field: string, value: string) => {
     setEditData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  if (isLoading) {
+    return <ProfileSkeleton />
   }
 
   return (

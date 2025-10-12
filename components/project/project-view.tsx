@@ -9,6 +9,7 @@ import { KanbanBoard } from "@/components/project/kanban-board"
 import { TaskDetailPanel } from "@/components/project/task-detail-panel"
 import { ProjectHeader } from "@/components/project/project-header"
 import { ViewSelector } from "@/components/project/view-selector"
+import { ProjectViewSkeleton } from "@/components/skeletons/project-view-skeleton"
 import { useProjectData } from "@/hooks/use-project-data"
 import { useTaskOperations } from "@/hooks/use-task-operations"
 import { saveWBSTasksWithSync } from "@/lib/storage"
@@ -79,14 +80,7 @@ export function ProjectView({ project, onShowTeam }: ProjectViewProps) {
   }, [])
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">프로젝트를 불러오는 중...</p>
-        </div>
-      </div>
-    )
+    return <ProjectViewSkeleton />
   }
 
   return (

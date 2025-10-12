@@ -11,7 +11,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bell, Download, Palette, Save, Shield, Trash2, User } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { SettingsSkeleton } from "@/components/skeletons/settings-skeleton";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -19,6 +20,7 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onBack }: SettingsPageProps) {
   const { theme, setTheme } = useTheme();
+  const [isLoading, setIsLoading] = useState(true);
 
   const [settings, setSettings] = useState({
     // 계정 설정
@@ -44,6 +46,15 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     sessionTimeout: "30",
   });
 
+  useEffect(() => {
+    // Simulate loading settings
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -56,6 +67,10 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
     // 설정 저장 로직
     console.log("Settings saved:", settings);
   };
+
+  if (isLoading) {
+    return <SettingsSkeleton />
+  }
 
   return (
     <div className="min-h-screen bg-background">
