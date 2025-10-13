@@ -1,18 +1,16 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SettingsSkeleton } from "@/components/skeletons/settings-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Download, Palette, Save, Shield, Trash2, User } from "lucide-react";
+import { Bell, Download, Palette, Save, Shield, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
-import { SettingsSkeleton } from "@/components/skeletons/settings-skeleton";
+import { useEffect, useState } from "react";
 
 interface SettingsPageProps {
   onBack: () => void;
@@ -23,12 +21,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const [settings, setSettings] = useState({
-    // 계정 설정
-    name: "김철수",
-    email: "kimcs@example.com",
-    company: "테크 컴퍼니",
-    position: "프로젝트 매니저",
-
     // 알림 설정
     emailNotifications: true,
     pushNotifications: true,
@@ -49,11 +41,11 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   useEffect(() => {
     // Simulate loading settings
     const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
+      setIsLoading(false);
+    }, 500);
 
-    return () => clearTimeout(timer)
-  }, [])
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -69,7 +61,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   };
 
   if (isLoading) {
-    return <SettingsSkeleton />
+    return <SettingsSkeleton />;
   }
 
   return (
@@ -84,74 +76,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       </div>
 
       <div className="p-6">
-        <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="account">계정</TabsTrigger>
+        <Tabs defaultValue="notifications" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="notifications">알림</TabsTrigger>
             <TabsTrigger value="appearance">외관</TabsTrigger>
             <TabsTrigger value="security">보안</TabsTrigger>
           </TabsList>
-
-          {/* 계정 설정 */}
-          <TabsContent value="account" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  프로필 정보
-                </CardTitle>
-                <CardDescription>기본 프로필 정보를 관리하세요</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src="/placeholder.svg?height=80&width=80" />
-                    <AvatarFallback>김철</AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-2">
-                    <Button variant="outline">프로필 사진 변경</Button>
-                    <p className="text-sm text-muted-foreground">JPG, PNG 파일만 업로드 가능합니다 (최대 5MB)</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">이름</Label>
-                    <Input
-                      id="name"
-                      value={settings.name}
-                      onChange={(e) => handleSettingChange("name", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">이메일</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={settings.email}
-                      onChange={(e) => handleSettingChange("email", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company">회사</Label>
-                    <Input
-                      id="company"
-                      value={settings.company}
-                      onChange={(e) => handleSettingChange("company", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="position">직책</Label>
-                    <Input
-                      id="position"
-                      value={settings.position}
-                      onChange={(e) => handleSettingChange("position", e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* 알림 설정 */}
           <TabsContent value="notifications" className="space-y-6">
