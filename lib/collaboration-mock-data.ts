@@ -7,7 +7,7 @@ import type {
   ActivityLog,
   CollaborativeProject,
   TeamMember,
-} from "./api-types"
+} from "./api-types";
 
 // Mock 사용자 데이터
 export const mockUsers: User[] = [
@@ -16,7 +16,7 @@ export const mockUsers: User[] = [
     name: "김프로",
     email: "kim.pro@company.com",
     avatar: "/professional-avatar.png",
-    role: "manager",
+    role: "admin",
     status: "active",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
@@ -46,7 +46,7 @@ export const mockUsers: User[] = [
     name: "최데이터",
     email: "choi.data@company.com",
     avatar: "/data-scientist-avatar.jpg",
-    role: "member",
+    role: "viewer",
     status: "active",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
@@ -56,12 +56,12 @@ export const mockUsers: User[] = [
     name: "정인공",
     email: "jung.ai@company.com",
     avatar: "/ai-engineer-avatar.jpg",
-    role: "member",
+    role: "viewer",
     status: "active",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
-]
+];
 
 // Mock 팀 멤버 데이터
 export const mockTeamMembers: TeamMember[] = [
@@ -70,9 +70,8 @@ export const mockTeamMembers: TeamMember[] = [
     name: "김프로",
     email: "kim.pro@company.com",
     avatar: "/professional-avatar.png",
-    role: "owner",
+    role: "admin",
     status: "active",
-    joinedAt: "2024-01-01T00:00:00Z",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
@@ -81,9 +80,8 @@ export const mockTeamMembers: TeamMember[] = [
     name: "이개발",
     email: "lee.dev@company.com",
     avatar: "/developer-avatar.png",
-    role: "admin",
+    role: "member",
     status: "active",
-    joinedAt: "2024-01-01T00:00:00Z",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
@@ -94,7 +92,6 @@ export const mockTeamMembers: TeamMember[] = [
     avatar: "/diverse-designer-avatars.png",
     role: "member",
     status: "active",
-    joinedAt: "2024-01-02T00:00:00Z",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
@@ -103,9 +100,8 @@ export const mockTeamMembers: TeamMember[] = [
     name: "최데이터",
     email: "choi.data@company.com",
     avatar: "/data-scientist-avatar.jpg",
-    role: "member",
+    role: "viewer",
     status: "active",
-    joinedAt: "2024-01-03T00:00:00Z",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
@@ -114,19 +110,19 @@ export const mockTeamMembers: TeamMember[] = [
     name: "정인공",
     email: "jung.ai@company.com",
     avatar: "/ai-engineer-avatar.jpg",
-    role: "member",
+    role: "viewer",
     status: "active",
-    joinedAt: "2024-01-05T00:00:00Z",
     createdAt: "2024-01-01T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
-]
+];
 
 // Mock 댓글 데이터
 export const mockComments: Comment[] = [
   {
     id: "comment-1",
-    content: "요구사항 분석이 거의 완료되었습니다. 내일 리뷰 미팅을 진행하면 좋을 것 같습니다.",
+    content:
+      "요구사항 분석이 거의 완료되었습니다. 내일 리뷰 미팅을 진행하면 좋을 것 같습니다.",
     author: mockTeamMembers[0],
     taskId: "task-1-1",
     createdAt: "2024-01-15T09:30:00Z",
@@ -152,7 +148,7 @@ export const mockComments: Comment[] = [
     updatedAt: "2024-01-20T14:30:00Z",
     replies: [],
   },
-]
+];
 
 // Mock 파일 첨부 데이터
 export const mockFileAttachments: FileAttachment[] = [
@@ -186,7 +182,7 @@ export const mockFileAttachments: FileAttachment[] = [
     uploadedAt: "2024-01-25T16:45:00Z",
     taskId: "task-2-1",
   },
-]
+];
 
 // Mock 알림 데이터
 export const mockNotifications: Notification[] = [
@@ -205,7 +201,8 @@ export const mockNotifications: Notification[] = [
     id: "notif-2",
     type: "comment_added",
     title: "새 댓글이 추가되었습니다",
-    message: '박디자인님이 "UI/UX 디자인 및 프로토타입" 작업에 댓글을 남겼습니다.',
+    message:
+      '박디자인님이 "UI/UX 디자인 및 프로토타입" 작업에 댓글을 남겼습니다.',
     recipient: "user-1",
     sender: mockTeamMembers[2],
     relatedId: "task-1-3",
@@ -233,7 +230,7 @@ export const mockNotifications: Notification[] = [
     isRead: false,
     createdAt: "2024-01-15T10:15:00Z",
   },
-]
+];
 
 // Mock 활동 로그 데이터
 export const mockActivityLogs: ActivityLog[] = [
@@ -269,7 +266,8 @@ export const mockActivityLogs: ActivityLog[] = [
   {
     id: "activity-4",
     type: "task_updated",
-    description: '"시스템 아키텍처 설계" 작업의 진행률을 100%로 업데이트했습니다.',
+    description:
+      '"시스템 아키텍처 설계" 작업의 진행률을 100%로 업데이트했습니다.',
     user: mockTeamMembers[1],
     projectId: "project-1",
     taskId: "task-1-2",
@@ -285,7 +283,7 @@ export const mockActivityLogs: ActivityLog[] = [
     metadata: { newMemberId: "user-5" },
     createdAt: "2024-01-05T10:00:00Z",
   },
-]
+];
 
 // Mock 협업 프로젝트 데이터
 export const mockCollaborativeProjects: CollaborativeProject[] = [
@@ -320,7 +318,7 @@ export const mockCollaborativeProjects: CollaborativeProject[] = [
     createdAt: "2023-12-15T00:00:00Z",
     updatedAt: "2024-01-15T00:00:00Z",
   },
-]
+];
 
 // 로컬 스토리지 키
 export const STORAGE_KEYS = {
@@ -329,51 +327,69 @@ export const STORAGE_KEYS = {
   ACTIVITY_LOGS: "collaboration_activity_logs",
   FILE_ATTACHMENTS: "collaboration_files",
   CURRENT_USER: "current_user",
-} as const
+} as const;
 
 // Mock 데이터 초기화 함수
 export function initializeMockData() {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return;
 
   // 로컬 스토리지에 Mock 데이터 저장
-  localStorage.setItem(STORAGE_KEYS.COMMENTS, JSON.stringify(mockComments))
-  localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(mockNotifications))
-  localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(mockActivityLogs))
-  localStorage.setItem(STORAGE_KEYS.FILE_ATTACHMENTS, JSON.stringify(mockFileAttachments))
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(mockTeamMembers[0])) // 현재 사용자를 김프로로 설정
+  localStorage.setItem(STORAGE_KEYS.COMMENTS, JSON.stringify(mockComments));
+  localStorage.setItem(
+    STORAGE_KEYS.NOTIFICATIONS,
+    JSON.stringify(mockNotifications)
+  );
+  localStorage.setItem(
+    STORAGE_KEYS.ACTIVITY_LOGS,
+    JSON.stringify(mockActivityLogs)
+  );
+  localStorage.setItem(
+    STORAGE_KEYS.FILE_ATTACHMENTS,
+    JSON.stringify(mockFileAttachments)
+  );
+  localStorage.setItem(
+    STORAGE_KEYS.CURRENT_USER,
+    JSON.stringify(mockTeamMembers[0])
+  ); // 현재 사용자를 김프로로 설정
 }
 
 // Mock 데이터 가져오기 함수들
 export function getMockComments(taskId?: string): Comment[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [];
 
-  const stored = localStorage.getItem(STORAGE_KEYS.COMMENTS)
-  const comments = stored ? JSON.parse(stored) : mockComments
+  const stored = localStorage.getItem(STORAGE_KEYS.COMMENTS);
+  const comments = stored ? JSON.parse(stored) : mockComments;
 
-  return taskId ? comments.filter((c: Comment) => c.taskId === taskId) : comments
+  return taskId
+    ? comments.filter((c: Comment) => c.taskId === taskId)
+    : comments;
 }
 
 export function getMockNotifications(userId?: string): Notification[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [];
 
-  const stored = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS)
-  const notifications = stored ? JSON.parse(stored) : mockNotifications
+  const stored = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+  const notifications = stored ? JSON.parse(stored) : mockNotifications;
 
-  return userId ? notifications.filter((n: Notification) => n.recipient === userId) : notifications
+  return userId
+    ? notifications.filter((n: Notification) => n.recipient === userId)
+    : notifications;
 }
 
 export function getMockActivityLogs(projectId?: string): ActivityLog[] {
-  if (typeof window === "undefined") return []
+  if (typeof window === "undefined") return [];
 
-  const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS)
-  const logs = stored ? JSON.parse(stored) : mockActivityLogs
+  const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS);
+  const logs = stored ? JSON.parse(stored) : mockActivityLogs;
 
-  return projectId ? logs.filter((l: ActivityLog) => l.projectId === projectId) : logs
+  return projectId
+    ? logs.filter((l: ActivityLog) => l.projectId === projectId)
+    : logs;
 }
 
 export function getCurrentUser(): User | null {
-  if (typeof window === "undefined") return null
+  if (typeof window === "undefined") return null;
 
-  const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
-  return stored ? JSON.parse(stored) : mockTeamMembers[0]
+  const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+  return stored ? JSON.parse(stored) : mockTeamMembers[0];
 }
