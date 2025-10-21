@@ -1,7 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
-import { TeamManagementPage } from "@/components/pages/team-management-page"
+import { TeamManagementPage } from "@/features/team/components/team-management-page"
 
 export default function TeamManagement() {
   const params = useParams()

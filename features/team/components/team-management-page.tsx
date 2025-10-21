@@ -53,7 +53,7 @@ import {
   Trash2,
   Crown,
 } from "lucide-react";
-import { TeamManagementSkeleton } from "@/components/skeletons/team-management-skeleton";
+import { TeamManagementSkeleton } from "@/features/team/skeletons/team-management-skeleton";
 import { apiService } from "@/lib/api-service";
 import type { TeamMember, UserRole } from "@/lib/api-types";
 

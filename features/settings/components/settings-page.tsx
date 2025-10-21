@@ -1,6 +1,6 @@
 "use client";
 
-import { SettingsSkeleton } from "@/components/skeletons/settings-skeleton";
+import { SettingsSkeleton } from "@/features/settings/skeletons/settings-skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
