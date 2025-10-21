@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash scripts/migrate-files.sh components/wbs/wbs-table.tsx features/wbs/components/WBSTable.tsx)",
+      "Bash(bash scripts/migrate-files.sh hooks/use-task-operations.ts features/wbs/hooks/useTaskOperations.ts)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

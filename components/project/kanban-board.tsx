@@ -9,18 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { WBSTask } from "@/lib/mock-data"
+import type { HierarchicalWBSTask } from "@/lib/mock-data"
 
 interface KanbanColumn {
   id: string
   title: string
-  status: WBSTask["status"]
+  status: HierarchicalWBSTask["status"]
   color: string
 }
 
 interface KanbanBoardProps {
-  tasks: WBSTask[]
-  onTaskStatusChange: (taskId: string, newStatus: WBSTask["status"]) => void
+  tasks: HierarchicalWBSTask[]
+  onTaskStatusChange: (taskId: string, newStatus: HierarchicalWBSTask["status"]) => void
   onTaskSelect?: (taskId: string) => void
 }
 
@@ -48,7 +48,7 @@ const columns: KanbanColumn[] = [
 export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanBoardProps) {
   const [draggedTask, setDraggedTask] = useState<string | null>(null)
 
-  const getTasksByStatus = (status: WBSTask["status"]) => {
+  const getTasksByStatus = (status: HierarchicalWBSTask["status"]) => {
     return tasks.filter((task) => task.status === status)
   }
 
@@ -62,7 +62,7 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
     e.dataTransfer.dropEffect = "move"
   }
 
-  const handleDrop = (e: React.DragEvent, newStatus: WBSTask["status"]) => {
+  const handleDrop = (e: React.DragEvent, newStatus: HierarchicalWBSTask["status"]) => {
     e.preventDefault()
     if (draggedTask) {
       onTaskStatusChange(draggedTask, newStatus)
