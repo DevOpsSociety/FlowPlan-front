@@ -3,9 +3,9 @@
 import type React from "react"
 
 import { useCallback } from "react"
-import { useToast } from "@/hooks/use-toast" // TODO: shared/hooks로 이동 예정
-import { emitSyncEvent } from "@/lib/storage" // TODO: shared/lib로 이동 예정
-import type { HierarchicalWBSTask } from "@/lib/mock-data" // TODO: OpenAPI codegen으로 타입 생성 후 변경
+import { useToast } from "@/shared/hooks/use-toast" // TODO: shared/hooks로 이동 예정
+import { emitSyncEvent } from "@/shared/lib/storage" // TODO: shared/lib로 이동 예정
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data" // TODO: OpenAPI codegen으로 타입 생성 후 변경
 
 export function useTaskOperations(
   projectId: string,

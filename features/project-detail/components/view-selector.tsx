@@ -1,7 +1,7 @@
 "use client"
 
 import { BarChart3, Kanban, Table } from "lucide-react"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group"
 
 interface ViewSelectorProps {
   currentView: "wbs" | "gantt" | "kanban"

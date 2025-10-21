@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/shared/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -19,14 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/shared/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/shared/ui/select";
 import {
   Table,
   TableBody,
@@ -34,9 +34,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from "@/shared/ui/table";
+import { Badge } from "@/shared/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,7 +44,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/shared/ui/dropdown-menu";
 import {
   UserPlus,
   MoreVertical,
@@ -54,8 +54,8 @@ import {
   Crown,
 } from "lucide-react";
 import { TeamManagementSkeleton } from "@/features/team/skeletons/team-management-skeleton";
-import { apiService } from "@/lib/api-service";
-import type { TeamMember, UserRole } from "@/lib/api-types";
+import { apiService } from "@/shared/lib/api-service";
+import type { TeamMember, UserRole } from "@/shared/lib/api-types";
 
 interface TeamManagementPageProps {
   projectId: string;

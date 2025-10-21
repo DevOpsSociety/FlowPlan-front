@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { TeamMember } from "@/lib/api-types"
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/ui/tooltip"
+import type { TeamMember } from "@/shared/lib/api-types"
 
 interface OnlineUsersProps {
   projectId: string

@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { User, Mail, Phone, MapPin, Calendar, Edit, Save, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/shared/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar"
+import { Input } from "@/shared/ui/input"
+import { Label } from "@/shared/ui/label"
+import { Textarea } from "@/shared/ui/textarea"
+import { Badge } from "@/shared/ui/badge"
 import { ProfileSkeleton } from "@/features/profile/skeletons/profile-skeleton"
 
 interface ProfilePageProps {

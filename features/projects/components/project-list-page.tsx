@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Search, Filter, Calendar, Users, MoreVertical, Eye, Edit, Trash2, FolderOpen } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { mockProjects, type Project } from "@/lib/mock-data"
-import { getProjects, deleteProject } from "@/lib/storage"
+import { Button } from "@/shared/ui/button"
+import { Input } from "@/shared/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card"
+import { Badge } from "@/shared/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
+import { mockProjects, type Project } from "@/shared/lib/mock-data"
+import { getProjects, deleteProject } from "@/shared/lib/storage"
 import { ProjectListSkeleton } from "@/features/projects/skeletons/project-list-skeleton"
 
 interface ProjectListPageProps {

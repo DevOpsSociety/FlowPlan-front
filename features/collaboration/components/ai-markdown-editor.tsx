@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { Loader2, ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/shared/ui/button"
+import { Label } from "@/shared/ui/label"
+import { Textarea } from "@/shared/ui/textarea"
+import { Card, CardContent } from "@/shared/ui/card"
 import ReactMarkdown from "react-markdown"
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/shared/ui/resizable"
 
 interface AIMarkdownEditorProps {
   onComplete: (markdown: string) => void

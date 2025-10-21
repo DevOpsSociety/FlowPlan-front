@@ -1,12 +1,12 @@
 "use client";
 
 import { SettingsSkeleton } from "@/features/settings/skeletons/settings-skeleton";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@/shared/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Label } from "@/shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select";
+import { Separator } from "@/shared/ui/separator";
+import { Switch } from "@/shared/ui/switch";
 import { Bell, Download, Palette, Save, Shield, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";

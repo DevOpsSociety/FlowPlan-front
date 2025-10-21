@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/shared/ui/scroll-area"
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar"
+import { Badge } from "@/shared/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card"
 import { FileText, MessageSquare, UserPlus, Edit, Trash2, Upload, CheckCircle2 } from "lucide-react"
-import { apiService } from "@/lib/api-service"
-import type { ActivityLog } from "@/lib/api-types"
+import { apiService } from "@/shared/lib/api-service"
+import type { ActivityLog } from "@/shared/lib/api-types"
 
 interface ActivityFeedProps {
   projectId: string

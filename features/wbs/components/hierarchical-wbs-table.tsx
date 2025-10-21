@@ -2,12 +2,12 @@
 
 import { useState } from "react"
 import { ChevronRight, Edit2, Trash2, Plus, Save, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { HierarchicalWBSTask } from "@/lib/mock-data" // TODO: OpenAPI codegen으로 타입 생성 후 변경
+import { Button } from "@/shared/ui/button"
+import { Badge } from "@/shared/ui/badge"
+import { Input } from "@/shared/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data" // TODO: OpenAPI codegen으로 타입 생성 후 변경
 
 interface HierarchicalWBSTableProps {
   tasks: HierarchicalWBSTask[]

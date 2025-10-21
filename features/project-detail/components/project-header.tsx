@@ -1,10 +1,10 @@
 "use client"
 
 import { Save, Download, Users } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
-import { getCurrentProject, saveProject, type StoredProject } from "@/lib/storage"
-import type { HierarchicalWBSTask } from "@/lib/mock-data"
+import { Button } from "@/shared/ui/button"
+import { useToast } from "@/shared/hooks/use-toast"
+import { getCurrentProject, saveProject, type StoredProject } from "@/shared/lib/storage"
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data"
 
 interface ProjectHeaderProps {
   project: any

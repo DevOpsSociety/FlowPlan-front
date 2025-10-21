@@ -4,12 +4,12 @@ import type React from "react"
 
 import { useState } from "react"
 import { Calendar, Clock, MoreHorizontal } from "lucide-react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import type { HierarchicalWBSTask } from "@/lib/mock-data"
+import { Card, CardContent, CardHeader } from "@/shared/ui/card"
+import { Badge } from "@/shared/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/ui/avatar"
+import { Button } from "@/shared/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/ui/dropdown-menu"
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data"
 
 interface KanbanColumn {
   id: string

@@ -4,9 +4,9 @@ import type React from "react"
 
 import { useState } from "react"
 import { ChevronLeft, ChevronRight, Edit } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { HierarchicalWBSTask } from "@/lib/mock-data"
+import { Button } from "@/shared/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui/select"
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data"
 
 interface GanttChartViewProps {
   tasks: HierarchicalWBSTask[]

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { BarChart3, Kanban, Table } from "lucide-react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
 import { HierarchicalWBSTable } from "@/features/wbs/components/hierarchical-wbs-table"
 import { GanttChartView } from "@/features/gantt/components/gantt-chart-view"
 import { KanbanBoard } from "@/features/kanban/components/kanban-board"
@@ -10,10 +10,10 @@ import { TaskDetailPanel } from "@/features/project-detail/components/task-detai
 import { ProjectHeader } from "@/features/project-detail/components/project-header"
 import { ViewSelector } from "@/features/project-detail/components/view-selector"
 import { ProjectViewSkeleton } from "@/features/project-detail/skeletons/project-view-skeleton"
-import { useProjectData } from "@/hooks/use-project-data"
+import { useProjectData } from "@/shared/hooks/use-project-data"
 import { useTaskOperations } from "@/features/wbs/hooks/use-task-operations"
-import { saveWBSTasksWithSync } from "@/lib/storage"
-import type { HierarchicalWBSTask } from "@/lib/mock-data"
+import { saveWBSTasksWithSync } from "@/shared/lib/storage"
+import type { HierarchicalWBSTask } from "@/shared/lib/mock-data"
 
 interface ProjectViewProps {
   project: any
