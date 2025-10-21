@@ -10,7 +10,22 @@
       "Bash(bash scripts/migrate-files.sh components/skeletons/new-project-skeleton.tsx features/project-creation/skeletons/new-project-skeleton.tsx)",
       "Bash(bash scripts/update-imports.sh \"@/components/pages/new-project-page\" \"@/features/project-creation/components/new-project-page\")",
       "Bash(bash scripts/update-imports.sh \"@/components/project/project-form\" \"@/features/project-creation/components/project-form\")",
-      "Bash(bash scripts/update-imports.sh \"@/components/skeletons/new-project-skeleton\" \"@/features/project-creation/skeletons/new-project-skeleton\")"
+      "Bash(bash scripts/update-imports.sh \"@/components/skeletons/new-project-skeleton\" \"@/features/project-creation/skeletons/new-project-skeleton\")",
+      "Bash(bash scripts/migrate-files.sh components/project/project-view.tsx features/project-detail/components/project-view.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/project-header.tsx features/project-detail/components/project-header.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/view-selector.tsx features/project-detail/components/view-selector.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/task-detail-panel.tsx features/project-detail/components/task-detail-panel.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/skeletons/project-view-skeleton.tsx features/project-detail/skeletons/project-view-skeleton.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/gantt-chart-view.tsx features/gantt/components/gantt-chart-view.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/kanban-board.tsx features/kanban/components/kanban-board.tsx)",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/project-view\" \"@/features/project-detail/components/project-view\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/project-header\" \"@/features/project-detail/components/project-header\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/view-selector\" \"@/features/project-detail/components/view-selector\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/task-detail-panel\" \"@/features/project-detail/components/task-detail-panel\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/skeletons/project-view-skeleton\" \"@/features/project-detail/skeletons/project-view-skeleton\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/gantt-chart-view\" \"@/features/gantt/components/gantt-chart-view\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/kanban-board\" \"@/features/kanban/components/kanban-board\")",
+      "Bash(npx tsc --noEmit)"
     ],
     "deny": [],
     "ask": []
