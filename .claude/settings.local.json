@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(bash scripts/migrate-files.sh components/wbs/wbs-table.tsx features/wbs/components/WBSTable.tsx)",
-      "Bash(bash scripts/migrate-files.sh hooks/use-task-operations.ts features/wbs/hooks/useTaskOperations.ts)"
+      "Bash(bash scripts/migrate-files.sh hooks/use-task-operations.ts features/wbs/hooks/useTaskOperations.ts)",
+      "Bash(bash scripts/migrate-files.sh components/pages/project-list-page.tsx features/projects/components/project-list-page.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/skeletons/project-list-skeleton.tsx features/projects/skeletons/project-list-skeleton.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/pages/new-project-page.tsx features/project-creation/components/new-project-page.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/project/project-form.tsx features/project-creation/components/project-form.tsx)",
+      "Bash(bash scripts/migrate-files.sh components/skeletons/new-project-skeleton.tsx features/project-creation/skeletons/new-project-skeleton.tsx)",
+      "Bash(bash scripts/update-imports.sh \"@/components/pages/new-project-page\" \"@/features/project-creation/components/new-project-page\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/project/project-form\" \"@/features/project-creation/components/project-form\")",
+      "Bash(bash scripts/update-imports.sh \"@/components/skeletons/new-project-skeleton\" \"@/features/project-creation/skeletons/new-project-skeleton\")"
     ],
     "deny": [],
     "ask": []

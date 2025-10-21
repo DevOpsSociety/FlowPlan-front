@@ -1,6 +1,6 @@
 "use client";
 
-import { NewProjectPage } from "@/components/pages/new-project-page";
+import { NewProjectPage } from "@/features/project-creation/components/new-project-page";
 import { saveProject } from "@/lib/storage";
 import router from "next/router";
 import { useState } from "react";

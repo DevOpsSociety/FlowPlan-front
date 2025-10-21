@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { mockProjects, type Project } from "@/lib/mock-data"
 import { getProjects, deleteProject } from "@/lib/storage"
-import { ProjectListSkeleton } from "@/components/skeletons/project-list-skeleton"
+import { ProjectListSkeleton } from "@/features/projects/skeletons/project-list-skeleton"
 
 interface ProjectListPageProps {
   onBack: () => void

@@ -1,4 +1,4 @@
-import { ProjectForm } from "@/components/project/project-form";
+import { ProjectForm } from "@/features/project-creation/components/project-form";
 
 interface NewProjectPageProps {
   onSubmit: (projectData: any) => void;
