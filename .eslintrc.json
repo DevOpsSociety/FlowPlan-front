@@ -1,0 +1,44 @@
+{
+  "extends": ["airbnb-typescript", "next/core-web-vitals", "prettier"],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["filename-rules"],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/jsx-props-no-spreading": "off",
+    "react/require-default-props": "off",
+    "import/prefer-default-export": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "@typescript-eslint/no-use-before-define": [
+      "error",
+      {
+        "functions": false,
+        "classes": false,
+        "variables": false,
+        "allowNamedExports": false
+      }
+    ],
+    "@typescript-eslint/no-shadow": "warn",
+    "@typescript-eslint/naming-convention": "off",
+    "filename-rules/match": [
+      2,
+      {
+        "*.tsx": "PascalCase",
+        "page.tsx": "exact",
+        "layout.tsx": "exact",
+        "loading.tsx": "exact",
+        "not-found.tsx": "exact",
+        "error.tsx": "exact",
+        "use*.ts": "camelCase",
+        "*.ts": "camelCase"
+      }
+    ]
+  }
+}
