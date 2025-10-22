@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ProjectView } from "@/components/project/project-view"
-import { getProject } from "@/lib/storage"
-import { mockProjects, mockProjectTasks } from "@/lib/mock-data"
+import { ProjectView } from "@/features/project-detail/components/project-view"
+import { getProject } from "@/shared/lib/storage"
+import { mockProjects, mockProjectTasks } from "@/shared/lib/mock-data"
 
 export default function ProjectPage() {
   const params = useParams()

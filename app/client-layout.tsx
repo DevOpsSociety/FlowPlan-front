@@ -1,7 +1,7 @@
 "use client";
 
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/shared/providers/theme-provider";
+import { Toaster } from "@/shared/ui/sonner";
 import { Analytics } from "@vercel/analytics/next";
 import type React from "react";
 

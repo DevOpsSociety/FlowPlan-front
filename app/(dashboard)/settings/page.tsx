@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { SettingsPage } from "@/components/pages/settings-page"
-import { getCurrentProjectId } from "@/lib/storage"
+import { SettingsPage } from "@/features/settings/components/settings-page"
+import { getCurrentProjectId } from "@/shared/lib/storage"
 
 export default function Settings() {
   const router = useRouter()
