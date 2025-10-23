@@ -23,14 +23,14 @@ import {
 } from 'lucide-react';
 import { apiService } from '@/shared/lib/apiService';
 import type { Comment, FileAttachment } from '@/shared/lib/apiTypes';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 import { useToast } from '@/shared/hooks/useToast';
 
 interface TaskDetailPanelProps {
-  task: HierarchicalWBSTask | null;
+  task: Task | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate?: (taskId: string, updates: Partial<HierarchicalWBSTask>) => void;
+  onUpdate?: (taskId: string, updates: Partial<Task>) => void;
 }
 
 export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailPanelProps) {
@@ -54,7 +54,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
 
     setIsLoadingComments(true);
     try {
-      const response = await apiService.getComments(task.id);
+      const response = await apiService.getComments(task.task_id);
       if (response.success && response.data) {
         setComments(response.data);
       }
@@ -77,7 +77,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
 
     setIsSubmittingComment(true);
     try {
-      const response = await apiService.addComment(task.id, newComment);
+      const response = await apiService.addComment(task.task_id, newComment);
       if (response.success && response.data) {
         setComments([...comments, response.data]);
         setNewComment('');
@@ -104,7 +104,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
 
     setIsUploadingFile(true);
     try {
-      const response = await apiService.uploadFile(file, task.id);
+      const response = await apiService.uploadFile(file, task.task_id);
       if (response.success && response.data) {
         setAttachments([...attachments, response.data]);
         toast({
@@ -130,7 +130,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
 
     try {
       await apiService.deleteFile(fileId);
-      setAttachments(attachments.filter((a) => a.id !== fileId));
+      setAttachments(attachments.filter((a) => a.task_id !== fileId));
       toast({
         title: '파일이 삭제되었습니다',
         description: '파일이 성공적으로 삭제되었습니다.',
@@ -190,18 +190,14 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
                 <Label className="text-xs text-muted-foreground">상태</Label>
                 <Badge
                   variant={
-                    task.status === 'done'
+                    task.status === '완료'
                       ? 'default'
-                      : task.status === 'in-progress'
+                      : task.status === '진행중'
                         ? 'secondary'
                         : 'outline'
                   }
                 >
-                  {task.status === 'done'
-                    ? '완료'
-                    : task.status === 'in-progress'
-                      ? '진행중'
-                      : '대기'}
+                  {task.status === '완료' ? '완료' : task.status === '진행중' ? '진행중' : '대기'}
                 </Badge>
               </div>
 
@@ -210,7 +206,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
                   <Calendar className="h-3 w-3" />
                   시작일
                 </Label>
-                <p className="text-sm">{formatDate(task.startDate)}</p>
+                <p className="text-sm">{formatDate(task.start_date)}</p>
               </div>
 
               <div className="space-y-2">
@@ -218,12 +214,12 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
                   <Calendar className="h-3 w-3" />
                   종료일
                 </Label>
-                <p className="text-sm">{formatDate(task.endDate)}</p>
+                <p className="text-sm">{formatDate(task.end_date)}</p>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">기간</Label>
-                <p className="text-sm">{task.duration}일</p>
+                <p className="text-sm">{task.duration_days}일</p>
               </div>
 
               <div className="space-y-2">
@@ -267,7 +263,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
               <div className="space-y-2">
                 {attachments.map((file) => (
                   <div
-                    key={file.id}
+                    key={file.task_id}
                     className="flex items-center justify-between p-3 rounded-lg border bg-card"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -288,7 +284,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteAttachment(file.id)}
+                        onClick={() => handleDeleteAttachment(file.task_id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -320,7 +316,7 @@ export function TaskDetailPanel({ task, isOpen, onClose, onUpdate }: TaskDetailP
               ) : comments.length > 0 ? (
                 <div className="space-y-4">
                   {comments.map((comment) => (
-                    <div key={comment.id} className="space-y-2">
+                    <div key={comment.taskId} className="space-y-2">
                       <div className="flex items-start gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={comment.author.avatar || '/placeholder.svg'} />

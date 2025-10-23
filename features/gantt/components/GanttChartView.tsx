@@ -6,12 +6,12 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Edit } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 
 interface GanttChartViewProps {
-  tasks: HierarchicalWBSTask[];
+  tasks: Task[];
   onTaskSelect?: (taskId: string) => void;
-  onTaskUpdate?: (taskId: string, updates: Partial<HierarchicalWBSTask>) => void;
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
   selectedTaskId?: string | null;
 }
 
@@ -25,16 +25,13 @@ export function GanttChartView({
   const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 1));
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
-  const getFlatTaskList = (
-    taskList: HierarchicalWBSTask[],
-    depth = 0
-  ): Array<HierarchicalWBSTask & { depth: number }> => {
-    const flatTasks: Array<HierarchicalWBSTask & { depth: number }> = [];
+  const getFlatTaskList = (taskList: Task[], depth = 0): Array<Task & { depth: number }> => {
+    const flatTasks: Array<Task & { depth: number }> = [];
 
     taskList.forEach((task) => {
       flatTasks.push({ ...task, depth });
-      if (task.subTasks && task.subTasks.length > 0) {
-        flatTasks.push(...getFlatTaskList(task.subTasks, depth + 1));
+      if (task.subtasks && task.subtasks.length > 0) {
+        flatTasks.push(...getFlatTaskList(task.subtasks, depth + 1));
       }
     });
 
@@ -55,16 +52,16 @@ export function GanttChartView({
     setCurrentDate(newDate);
   };
 
-  const getTaskColor = (task: HierarchicalWBSTask) => {
-    if (task.status === 'done') return 'bg-green-500';
-    if (task.status === 'in-progress') return 'bg-blue-500';
-    if (task.status === 'todo') return 'bg-gray-400';
+  const getTaskColor = (task: Task) => {
+    if (task.status === '완료') return 'bg-green-500';
+    if (task.status === '진행중') return 'bg-blue-500';
+    if (task.status === '할일') return 'bg-gray-400';
     return 'bg-gray-400';
   };
 
-  const calculateBarPosition = (task: HierarchicalWBSTask) => {
-    const startDate = new Date(task.startDate);
-    const endDate = new Date(task.endDate);
+  const calculateBarPosition = (task: Task) => {
+    const startDate = new Date(task.start_date);
+    const endDate = new Date(task.end_date);
 
     const startDiff = Math.floor(
       (startDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -90,16 +87,16 @@ export function GanttChartView({
       const daysDelta = Math.round(deltaX / cellWidth);
 
       if (daysDelta !== 0 && onTaskUpdate) {
-        const task = flatTasks.find((t) => t.id === taskId);
+        const task = flatTasks.find((t) => t.task_id === taskId);
         if (task) {
-          const newStartDate = new Date(task.startDate);
-          const newEndDate = new Date(task.endDate);
+          const newStartDate = new Date(task.start_date);
+          const newEndDate = new Date(task.end_date);
           newStartDate.setDate(newStartDate.getDate() + daysDelta);
           newEndDate.setDate(newEndDate.getDate() + daysDelta);
 
           onTaskUpdate(taskId, {
-            startDate: newStartDate.toISOString().split('T')[0],
-            endDate: newEndDate.toISOString().split('T')[0],
+            start_date: newStartDate.toISOString().split('T')[0],
+            end_date: newEndDate.toISOString().split('T')[0],
           });
         }
       }
@@ -122,9 +119,9 @@ export function GanttChartView({
       const clickX = e.clientX - rect.left;
       const newProgress = Math.round((clickX / rect.width) * 100);
 
-      let newStatus: HierarchicalWBSTask['status'] = 'todo';
-      if (newProgress >= 100) newStatus = 'done';
-      else if (newProgress > 0) newStatus = 'in-progress';
+      let newStatus: Task['status'] = '할일';
+      if (newProgress >= 100) newStatus = '완료';
+      else if (newProgress > 0) newStatus = '진행중';
 
       onTaskUpdate(taskId, { progress: newProgress, status: newStatus });
     }
@@ -184,11 +181,11 @@ export function GanttChartView({
             <div className="p-3 bg-muted font-medium border-b">작업명</div>
             {flatTasks.map((task) => (
               <div
-                key={task.id}
+                key={task.task_id}
                 className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
-                  selectedTaskId === task.id ? 'bg-primary/10 border-primary/20' : ''
+                  selectedTaskId === task.task_id ? 'bg-primary/10 border-primary/20' : ''
                 }`}
-                onClick={() => onTaskSelect?.(task.id)}
+                onClick={() => onTaskSelect?.(task.task_id)}
                 style={{ paddingLeft: `${12 + task.depth * 20}px` }}
               >
                 <div className="flex items-center justify-between">
@@ -198,11 +195,13 @@ export function GanttChartView({
                       ({task.assignee})
                     </span>
                   </div>
-                  {selectedTaskId === task.id && <Edit className="h-3 w-3 text-muted-foreground" />}
+                  {selectedTaskId === task.task_id && (
+                    <Edit className="h-3 w-3 text-muted-foreground" />
+                  )}
                 </div>
                 <div
                   className="mt-2 w-full bg-gray-200 rounded-full h-2 cursor-pointer hover:bg-gray-300 transition-colors"
-                  onClick={(e) => handleProgressClick(task.id, e)}
+                  onClick={(e) => handleProgressClick(task.task_id, e)}
                   title={`진행률: ${task.progress}% (클릭하여 수정)`}
                 >
                   <div
@@ -212,11 +211,7 @@ export function GanttChartView({
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {task.progress}% •{' '}
-                  {task.status === 'todo'
-                    ? '할 일'
-                    : task.status === 'in-progress'
-                      ? '진행 중'
-                      : '완료'}
+                  {task.status === '할일' ? '할 일' : task.status === '진행중' ? '진행 중' : '완료'}
                 </div>
               </div>
             ))}
@@ -241,11 +236,11 @@ export function GanttChartView({
             <div className="relative min-w-max">
               {flatTasks.map((task, taskIndex) => {
                 const { left, width } = calculateBarPosition(task);
-                const isSelected = selectedTaskId === task.id;
-                const isDragging = draggedTask === task.id;
+                const isSelected = selectedTaskId === task.task_id;
+                const isDragging = draggedTask === task.task_id;
 
                 return (
-                  <div key={task.id} className="relative border-b" style={{ height: 73 }}>
+                  <div key={task.task_id} className="relative border-b" style={{ height: 73 }}>
                     {/* 그리드 라인 */}
                     <div className="absolute inset-0 flex">
                       {generateTimelineHeaders().map((_, index) => (
@@ -268,8 +263,8 @@ export function GanttChartView({
                           isDragging ? 'opacity-75 scale-105' : 'hover:opacity-90'
                         }`}
                         style={{ left, width: Math.max(width, 20) }}
-                        onClick={() => onTaskSelect?.(task.id)}
-                        onMouseDown={(e) => handleTaskDragStart(task.id, e)}
+                        onClick={() => onTaskSelect?.(task.task_id)}
+                        onMouseDown={(e) => handleTaskDragStart(task.task_id, e)}
                         title={`${task.name} (드래그하여 일정 조정)`}
                       >
                         <div className="px-2 py-1 text-xs text-white truncate flex items-center justify-between">
@@ -281,10 +276,10 @@ export function GanttChartView({
 
                     <div className="absolute bottom-1 left-2 text-xs text-muted-foreground">
                       <div>
-                        {task.startDate} ~ {task.endDate}
+                        {task.start_date} ~ {task.end_date}
                       </div>
                       <div className="text-xs opacity-75">
-                        {task.duration}일 • {task.assignee}
+                        {task.duration_days}일 • {task.assignee}
                       </div>
                     </div>
                   </div>

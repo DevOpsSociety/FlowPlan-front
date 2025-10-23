@@ -13,7 +13,7 @@ import { ProjectViewSkeleton } from '@/features/project-detail/skeletons/Project
 import { useProjectData } from '@/shared/hooks/useProjectData';
 import { useTaskOperations } from '@/features/wbs/hooks/useTaskOperations';
 import { saveWBSTasksWithSync } from '@/shared/lib/storage';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 
 interface ProjectViewProps {
   project: any;
@@ -23,13 +23,13 @@ interface ProjectViewProps {
 export function ProjectView({ project, onShowTeam }: ProjectViewProps) {
   const [currentView, setCurrentView] = useState<'wbs' | 'gantt' | 'kanban'>('wbs');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<HierarchicalWBSTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
 
-  const { wbsTasks, setWbsTasks, isLoading } = useProjectData(project.id);
+  const { wbsTasks, setWbsTasks, isLoading } = useProjectData(project.task_id);
 
   const { findTaskById, handleTaskUpdate, handleTaskDelete, handleTaskAdd } = useTaskOperations(
-    project.id,
+    project.task_id,
     wbsTasks,
     setWbsTasks
   );
@@ -37,12 +37,12 @@ export function ProjectView({ project, onShowTeam }: ProjectViewProps) {
   useEffect(() => {
     if (!isLoading && wbsTasks.length > 0) {
       const timeoutId = setTimeout(() => {
-        saveWBSTasksWithSync(wbsTasks, project.id);
+        saveWBSTasksWithSync(wbsTasks, project.task_id);
       }, 1000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [wbsTasks, isLoading, project.id]);
+  }, [wbsTasks, isLoading, project.task_id]);
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {
@@ -57,20 +57,20 @@ export function ProjectView({ project, onShowTeam }: ProjectViewProps) {
   );
 
   const handleKanbanStatusChange = useCallback(
-    (taskId: string, newStatus: HierarchicalWBSTask['status']) => {
+    (taskId: string, newStatus: Task['status']) => {
       handleTaskUpdate(taskId, { status: newStatus });
     },
     [handleTaskUpdate]
   );
 
-  const getFlatTaskList = useCallback((tasks: HierarchicalWBSTask[]): HierarchicalWBSTask[] => {
-    const flatTasks: HierarchicalWBSTask[] = [];
+  const getFlatTaskList = useCallback((tasks: Task[]): Task[] => {
+    const flatTasks: Task[] = [];
 
-    const flatten = (taskList: HierarchicalWBSTask[]) => {
+    const flatten = (taskList: Task[]) => {
       taskList.forEach((task) => {
         flatTasks.push(task);
-        if (task.subTasks && task.subTasks.length > 0) {
-          flatten(task.subTasks);
+        if (task.subtasks && task.subtasks.length > 0) {
+          flatten(task.subtasks);
         }
       });
     };

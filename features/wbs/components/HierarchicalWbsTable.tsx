@@ -7,37 +7,37 @@ import { Badge } from '@/shared/ui/badge';
 import { Input } from '@/shared/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData'; // TODO: OpenAPI codegen으로 타입 생성 후 변경
+import type { Task } from '@/shared/lib/apiTypes';
 
 interface HierarchicalWBSTableProps {
-  tasks: HierarchicalWBSTask[];
-  onTaskUpdate: (taskId: string, updates: Partial<HierarchicalWBSTask>) => void;
+  tasks: Task[];
+  onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
-  onTaskAdd: (parentId?: string, taskData?: Partial<HierarchicalWBSTask>) => void;
+  onTaskAdd: (parentId?: string, taskData?: Partial<Task>) => void;
   onTaskSelect?: (taskId: string) => void;
 }
 
 interface TaskRowProps {
-  task: HierarchicalWBSTask;
+  task: Task;
   depth: number;
   expandedTasks: Set<string>;
   onToggleExpand: (taskId: string) => void;
   editingTask: string | null;
-  editValues: Partial<HierarchicalWBSTask>;
-  onEdit: (task: HierarchicalWBSTask) => void;
+  editValues: Partial<Task>;
+  onEdit: (task: Task) => void;
   onSave: () => void;
   onCancel: () => void;
-  onTaskUpdate: (taskId: string, updates: Partial<HierarchicalWBSTask>) => void;
+  onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
-  onTaskAdd: (parentId?: string, taskData?: Partial<HierarchicalWBSTask>) => void;
+  onTaskAdd: (parentId?: string, taskData?: Partial<Task>) => void;
   onTaskSelect?: (taskId: string) => void;
-  setEditValues: (values: Partial<HierarchicalWBSTask>) => void;
+  setEditValues: (values: Partial<Task>) => void;
   creatingTask: string | null;
-  newTaskValues: Partial<HierarchicalWBSTask>;
+  newTaskValues: Partial<Task>;
   onCreateTask: (parentId?: string) => void;
   onSaveNewTask: (parentId?: string) => void;
   onCancelNewTask: () => void;
-  setNewTaskValues: (values: Partial<HierarchicalWBSTask>) => void;
+  setNewTaskValues: (values: Partial<Task>) => void;
 }
 
 function TaskRow({
@@ -62,26 +62,19 @@ function TaskRow({
   onCancelNewTask,
   setNewTaskValues,
 }: TaskRowProps) {
-  const hasSubTasks = task.subTasks && task.subTasks.length > 0;
-  const isExpanded = expandedTasks.has(task.id);
+  const hasSubTasks = task.subtasks && task.subtasks.length > 0;
+  const isExpanded = expandedTasks.has(task.task_id);
   const paddingLeft = `${depth * 24 + 8}px`;
 
-  const getStatusBadge = (status: HierarchicalWBSTask['status']) => {
+  const getStatusBadge = (status: Task['status']) => {
     const variants = {
-      todo: 'secondary',
-      'in-progress': 'default',
-      done: 'success',
-      blocked: 'destructive',
+      할일: 'secondary',
+      진행중: 'default',
+      완료: 'success',
+      보류: 'destructive',
     } as const;
 
-    const labels = {
-      todo: '할 일',
-      'in-progress': '진행 중',
-      done: '완료',
-      blocked: '차단됨',
-    };
-
-    return <Badge variant={variants[status] as any}>{labels[status]}</Badge>;
+    return <Badge variant={variants[status] as any}>{status}</Badge>;
   };
 
   const formatDuration = (days: number) => {
@@ -92,10 +85,10 @@ function TaskRow({
     <>
       <TableRow
         className="cursor-pointer hover:bg-muted/50"
-        onClick={() => onTaskSelect?.(task.id)}
+        onClick={() => onTaskSelect?.(task.task_id)}
       >
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <div style={{ paddingLeft }}>
               <Input
                 value={editValues.name || ''}
@@ -112,7 +105,7 @@ function TaskRow({
                   className="h-6 w-6 p-0 mr-2"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onToggleExpand(task.id);
+                    onToggleExpand(task.task_id);
                   }}
                 >
                   <ChevronRight
@@ -126,7 +119,7 @@ function TaskRow({
           )}
         </TableCell>
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <Input
               value={editValues.assignee || ''}
               onChange={(e) => setEditValues({ ...editValues, assignee: e.target.value })}
@@ -137,30 +130,30 @@ function TaskRow({
           )}
         </TableCell>
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <Input
               type="date"
-              value={editValues.startDate || ''}
-              onChange={(e) => setEditValues({ ...editValues, startDate: e.target.value })}
+              value={editValues.start_date || ''}
+              onChange={(e) => setEditValues({ ...editValues, start_date: e.target.value })}
               className="h-8"
             />
           ) : (
-            task.startDate
+            task.start_date
           )}
         </TableCell>
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <Input
               type="date"
-              value={editValues.endDate || ''}
-              onChange={(e) => setEditValues({ ...editValues, endDate: e.target.value })}
+              value={editValues.end_date || ''}
+              onChange={(e) => setEditValues({ ...editValues, end_date: e.target.value })}
               className="h-8"
             />
           ) : (
-            task.endDate
+            task.end_date
           )}
         </TableCell>
-        <TableCell>{formatDuration(task.duration)}</TableCell>
+        <TableCell>{formatDuration(task.duration_days)}</TableCell>
         <TableCell>
           <div className="flex items-center space-x-2">
             <div className="w-12 bg-muted rounded-full h-2">
@@ -173,21 +166,21 @@ function TaskRow({
           </div>
         </TableCell>
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <Select
               value={editValues.status || task.status}
               onValueChange={(value) =>
-                setEditValues({ ...editValues, status: value as HierarchicalWBSTask['status'] })
+                setEditValues({ ...editValues, status: value as Task['status'] })
               }
             >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">할 일</SelectItem>
-                <SelectItem value="in-progress">진행 중</SelectItem>
-                <SelectItem value="done">완료</SelectItem>
-                <SelectItem value="blocked">차단됨</SelectItem>
+                <SelectItem value="할일">할 일</SelectItem>
+                <SelectItem value="진행중">진행 중</SelectItem>
+                <SelectItem value="완료">완료</SelectItem>
+                <SelectItem value="보류">차단됨</SelectItem>
               </SelectContent>
             </Select>
           ) : (
@@ -195,7 +188,7 @@ function TaskRow({
           )}
         </TableCell>
         <TableCell>
-          {editingTask === task.id ? (
+          {editingTask === task.task_id ? (
             <div className="flex space-x-1">
               <Button size="sm" variant="outline" onClick={onSave}>
                 <Save className="h-3 w-3" />
@@ -214,14 +207,16 @@ function TaskRow({
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onCreateTask(task.id);
+                  onCreateTask(task.task_id);
                 }}
-                disabled={task.depth >= 1}
-                title={task.depth >= 1 ? '최대 2단계까지만 작업 추가 가능' : '하위 작업 추가'}
+                disabled={task.parent_id !== null}
+                title={
+                  task.parent_id !== null ? '최대 2단계까지만 작업 추가 가능' : '하위 작업 추가'
+                }
               >
                 <Plus className="h-3 w-3" />
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => onTaskDelete(task.id)}>
+              <Button size="sm" variant="ghost" onClick={() => onTaskDelete(task.task_id)}>
                 <Trash2 className="h-3 w-3" />
               </Button>
             </div>
@@ -229,7 +224,7 @@ function TaskRow({
         </TableCell>
       </TableRow>
 
-      {creatingTask === task.id && (
+      {creatingTask === task.task_id && (
         <TableRow className="bg-muted/30">
           <TableCell>
             <div style={{ paddingLeft: `${(depth + 1) * 24 + 8}px` }}>
@@ -253,27 +248,27 @@ function TaskRow({
           <TableCell>
             <Input
               type="date"
-              value={newTaskValues.startDate || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, startDate: e.target.value })}
+              value={newTaskValues.start_date || ''}
+              onChange={(e) => setNewTaskValues({ ...newTaskValues, start_date: e.target.value })}
               className="h-8"
             />
           </TableCell>
           <TableCell>
             <Input
               type="date"
-              value={newTaskValues.endDate || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, endDate: e.target.value })}
+              value={newTaskValues.end_date || ''}
+              onChange={(e) => setNewTaskValues({ ...newTaskValues, end_date: e.target.value })}
               className="h-8"
             />
           </TableCell>
           <TableCell>
             <Input
               type="number"
-              value={newTaskValues.duration || ''}
+              value={newTaskValues.duration_days || ''}
               onChange={(e) =>
                 setNewTaskValues({
                   ...newTaskValues,
-                  duration: Number.parseInt(e.target.value) || 0,
+                  duration_days: Number.parseInt(e.target.value) || 0,
                 })
               }
               placeholder="일"
@@ -287,7 +282,7 @@ function TaskRow({
               onValueChange={(value) =>
                 setNewTaskValues({
                   ...newTaskValues,
-                  status: value as HierarchicalWBSTask['status'],
+                  status: value as Task['status'],
                 })
               }
             >
@@ -295,16 +290,16 @@ function TaskRow({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">할 일</SelectItem>
-                <SelectItem value="in-progress">진행 중</SelectItem>
-                <SelectItem value="done">완료</SelectItem>
-                <SelectItem value="blocked">차단됨</SelectItem>
+                <SelectItem value="할일">할 일</SelectItem>
+                <SelectItem value="진행중">진행 중</SelectItem>
+                <SelectItem value="완료">완료</SelectItem>
+                <SelectItem value="보류">차단됨</SelectItem>
               </SelectContent>
             </Select>
           </TableCell>
           <TableCell>
             <div className="flex space-x-1">
-              <Button size="sm" variant="outline" onClick={() => onSaveNewTask(task.id)}>
+              <Button size="sm" variant="outline" onClick={() => onSaveNewTask(task.task_id)}>
                 <Save className="h-3 w-3" />
               </Button>
               <Button size="sm" variant="ghost" onClick={onCancelNewTask}>
@@ -317,9 +312,9 @@ function TaskRow({
 
       {hasSubTasks &&
         isExpanded &&
-        task.subTasks.map((subTask) => (
+        task.subtasks.map((subTask: Task) => (
           <TaskRow
-            key={subTask.id}
+            key={subTask.task_id}
             task={subTask}
             depth={depth + 1}
             expandedTasks={expandedTasks}
@@ -343,7 +338,7 @@ function TaskRow({
           />
         ))}
 
-      {creatingTask === `${task.id}-after` && (
+      {creatingTask === `${task.task_id}-after` && (
         <TableRow className="bg-muted/30">
           <TableCell>
             <div style={{ paddingLeft: `${(depth + 1) * 24 + 8}px` }}>
@@ -367,27 +362,27 @@ function TaskRow({
           <TableCell>
             <Input
               type="date"
-              value={newTaskValues.startDate || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, startDate: e.target.value })}
+              value={newTaskValues.start_date || ''}
+              onChange={(e) => setNewTaskValues({ ...newTaskValues, start_date: e.target.value })}
               className="h-8"
             />
           </TableCell>
           <TableCell>
             <Input
               type="date"
-              value={newTaskValues.endDate || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, endDate: e.target.value })}
+              value={newTaskValues.end_date || ''}
+              onChange={(e) => setNewTaskValues({ ...newTaskValues, end_date: e.target.value })}
               className="h-8"
             />
           </TableCell>
           <TableCell>
             <Input
               type="number"
-              value={newTaskValues.duration || ''}
+              value={newTaskValues.duration_days || ''}
               onChange={(e) =>
                 setNewTaskValues({
                   ...newTaskValues,
-                  duration: Number.parseInt(e.target.value) || 0,
+                  duration_days: Number.parseInt(e.target.value) || 0,
                 })
               }
               placeholder="일"
@@ -401,7 +396,7 @@ function TaskRow({
               onValueChange={(value) =>
                 setNewTaskValues({
                   ...newTaskValues,
-                  status: value as HierarchicalWBSTask['status'],
+                  status: value as Task['status'],
                 })
               }
             >
@@ -409,16 +404,16 @@ function TaskRow({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">할 일</SelectItem>
-                <SelectItem value="in-progress">진행 중</SelectItem>
-                <SelectItem value="done">완료</SelectItem>
-                <SelectItem value="blocked">차단됨</SelectItem>
+                <SelectItem value="할일">할 일</SelectItem>
+                <SelectItem value="진행중">진행 중</SelectItem>
+                <SelectItem value="완료">완료</SelectItem>
+                <SelectItem value="보류">차단됨</SelectItem>
               </SelectContent>
             </Select>
           </TableCell>
           <TableCell>
             <div className="flex space-x-1">
-              <Button size="sm" variant="outline" onClick={() => onSaveNewTask(task.id)}>
+              <Button size="sm" variant="outline" onClick={() => onSaveNewTask(task.task_id)}>
                 <Save className="h-3 w-3" />
               </Button>
               <Button size="sm" variant="ghost" onClick={onCancelNewTask}>
@@ -440,18 +435,18 @@ export function HierarchicalWBSTable({
   onTaskSelect,
 }: HierarchicalWBSTableProps) {
   const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<Partial<HierarchicalWBSTask>>({});
+  const [editValues, setEditValues] = useState<Partial<Task>>({});
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
   const [creatingTask, setCreatingTask] = useState<string | null>(null);
-  const [newTaskValues, setNewTaskValues] = useState<Partial<HierarchicalWBSTask>>({
+  const [newTaskValues, setNewTaskValues] = useState<Partial<Task>>({
     name: '',
     assignee: '',
-    startDate: '',
-    endDate: '',
-    duration: 1,
+    start_date: '',
+    end_date: '',
+    duration_days: 1,
     progress: 0,
-    status: 'todo',
+    status: '할일',
   });
 
   const handleToggleExpand = (taskId: string) => {
@@ -464,8 +459,8 @@ export function HierarchicalWBSTable({
     setExpandedTasks(newExpanded);
   };
 
-  const handleEdit = (task: HierarchicalWBSTask) => {
-    setEditingTask(task.id);
+  const handleEdit = (task: Task) => {
+    setEditingTask(task.task_id);
     setEditValues(task);
   };
 
@@ -487,11 +482,11 @@ export function HierarchicalWBSTable({
     setNewTaskValues({
       name: '',
       assignee: '',
-      startDate: '',
-      endDate: '',
-      duration: 1,
+      start_date: '',
+      end_date: '',
+      duration_days: 1,
       progress: 0,
-      status: 'todo',
+      status: '할일',
     });
   };
 
@@ -502,11 +497,11 @@ export function HierarchicalWBSTable({
       setNewTaskValues({
         name: '',
         assignee: '',
-        startDate: '',
-        endDate: '',
-        duration: 1,
+        start_date: '',
+        end_date: '',
+        duration_days: 1,
         progress: 0,
-        status: 'todo',
+        status: '할일',
       });
     }
   };
@@ -516,11 +511,11 @@ export function HierarchicalWBSTable({
     setNewTaskValues({
       name: '',
       assignee: '',
-      startDate: '',
-      endDate: '',
-      duration: 1,
+      start_date: '',
+      end_date: '',
+      duration_days: 1,
       progress: 0,
-      status: 'todo',
+      status: '할일',
     });
   };
 
@@ -587,9 +582,9 @@ export function HierarchicalWBSTable({
                 <TableCell>
                   <Input
                     type="date"
-                    value={newTaskValues.startDate || ''}
+                    value={newTaskValues.start_date || ''}
                     onChange={(e) =>
-                      setNewTaskValues({ ...newTaskValues, startDate: e.target.value })
+                      setNewTaskValues({ ...newTaskValues, start_date: e.target.value })
                     }
                     className="h-8"
                   />
@@ -597,9 +592,9 @@ export function HierarchicalWBSTable({
                 <TableCell>
                   <Input
                     type="date"
-                    value={newTaskValues.endDate || ''}
+                    value={newTaskValues.end_date || ''}
                     onChange={(e) =>
-                      setNewTaskValues({ ...newTaskValues, endDate: e.target.value })
+                      setNewTaskValues({ ...newTaskValues, end_date: e.target.value })
                     }
                     className="h-8"
                   />
@@ -607,11 +602,11 @@ export function HierarchicalWBSTable({
                 <TableCell>
                   <Input
                     type="number"
-                    value={newTaskValues.duration || ''}
+                    value={newTaskValues.duration_days || ''}
                     onChange={(e) =>
                       setNewTaskValues({
                         ...newTaskValues,
-                        duration: Number.parseInt(e.target.value) || 0,
+                        duration_days: Number.parseInt(e.target.value) || 0,
                       })
                     }
                     placeholder="일"
@@ -625,7 +620,7 @@ export function HierarchicalWBSTable({
                     onValueChange={(value) =>
                       setNewTaskValues({
                         ...newTaskValues,
-                        status: value as HierarchicalWBSTask['status'],
+                        status: value as Task['status'],
                       })
                     }
                   >
@@ -633,10 +628,10 @@ export function HierarchicalWBSTable({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todo">할 일</SelectItem>
-                      <SelectItem value="in-progress">진행 중</SelectItem>
-                      <SelectItem value="done">완료</SelectItem>
-                      <SelectItem value="blocked">차단됨</SelectItem>
+                      <SelectItem value="할일">할 일</SelectItem>
+                      <SelectItem value="진행중">진행 중</SelectItem>
+                      <SelectItem value="완료">완료</SelectItem>
+                      <SelectItem value="보류">차단됨</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -655,7 +650,7 @@ export function HierarchicalWBSTable({
 
             {tasks.map((task) => (
               <TaskRow
-                key={task.id}
+                key={task.task_id}
                 task={task}
                 depth={0}
                 expandedTasks={expandedTasks}

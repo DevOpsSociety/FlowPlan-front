@@ -1,4 +1,4 @@
-import type { HierarchicalWBSTask } from './mockData';
+import type { Task } from './apiTypes';
 
 const STORAGE_KEYS = {
   PROJECTS: 'flowplan_projects',
@@ -14,7 +14,7 @@ export interface StoredProject {
   duration: number;
   createdAt: string;
   updatedAt: string;
-  wbsTasks: HierarchicalWBSTask[];
+  wbsTasks: Task[];
 }
 
 // 프로젝트 저장
@@ -96,7 +96,7 @@ export const deleteProject = (projectId: string): void => {
 };
 
 // WBS 작업 저장 (현재 프로젝트)
-export const saveWBSTasks = (tasks: HierarchicalWBSTask[]): void => {
+export const saveWBSTasks = (tasks: Task[]): void => {
   try {
     const currentProject = getCurrentProject();
     if (currentProject) {
@@ -113,7 +113,7 @@ export const saveWBSTasks = (tasks: HierarchicalWBSTask[]): void => {
 };
 
 // WBS 작업 가져오기 (현재 프로젝트)
-export const getWBSTasks = (): HierarchicalWBSTask[] => {
+export const getWBSTasks = (): Task[] => {
   try {
     const currentProject = getCurrentProject();
     return currentProject?.wbsTasks || [];
@@ -155,7 +155,7 @@ export const emitSyncEvent = (event: SyncEvent) => {
 };
 
 // Enhanced WBS task saving with sync events
-export const saveWBSTasksWithSync = (tasks: HierarchicalWBSTask[], projectId?: string): void => {
+export const saveWBSTasksWithSync = (tasks: Task[], _projectId?: string): void => {
   try {
     const currentProject = getCurrentProject();
     if (currentProject) {
@@ -182,24 +182,24 @@ export const saveWBSTasksWithSync = (tasks: HierarchicalWBSTask[], projectId?: s
 // Enhanced task update with sync events
 export const updateTaskWithSync = (
   taskId: string,
-  updates: Partial<HierarchicalWBSTask>,
-  projectId?: string
+  updates: Partial<Task>,
+  _projectId?: string
 ): void => {
   try {
     const currentProject = getCurrentProject();
     if (currentProject) {
-      const updateTaskRecursively = (tasks: HierarchicalWBSTask[]): HierarchicalWBSTask[] => {
+      const updateTaskRecursively = (tasks: Task[]): Task[] => {
         return tasks.map((task) => {
-          if (task.id === taskId) {
+          if (task.task_id === taskId) {
             const updatedTask = { ...task, ...updates };
 
             // Auto-update progress based on status
             if (updates.status) {
-              if (updates.status === 'done') {
+              if (updates.status === '완료') {
                 updatedTask.progress = 100;
-              } else if (updates.status === 'in-progress' && task.progress === 0) {
+              } else if (updates.status === '진행중' && task.progress === 0) {
                 updatedTask.progress = 10;
-              } else if (updates.status === 'todo') {
+              } else if (updates.status === '할일') {
                 updatedTask.progress = 0;
               }
             }
@@ -207,10 +207,10 @@ export const updateTaskWithSync = (
             return updatedTask;
           }
 
-          if (task.subTasks && task.subTasks.length > 0) {
+          if (task.subtasks && task.subtasks.length > 0) {
             return {
               ...task,
-              subTasks: updateTaskRecursively(task.subTasks),
+              subtasks: updateTaskRecursively(task.subtasks),
             };
           }
 

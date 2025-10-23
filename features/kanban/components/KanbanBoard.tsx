@@ -14,38 +14,38 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 
 interface KanbanColumn {
   id: string;
   title: string;
-  status: HierarchicalWBSTask['status'];
+  status: Task['status'];
   color: string;
 }
 
 interface KanbanBoardProps {
-  tasks: HierarchicalWBSTask[];
-  onTaskStatusChange: (taskId: string, newStatus: HierarchicalWBSTask['status']) => void;
+  tasks: Task[];
+  onTaskStatusChange: (taskId: string, newStatus: Task['status']) => void;
   onTaskSelect?: (taskId: string) => void;
 }
 
 const columns: KanbanColumn[] = [
   {
-    id: 'todo',
+    id: '할일',
     title: '할 일',
-    status: 'todo',
+    status: '할일',
     color: 'bg-slate-100 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50',
   },
   {
-    id: 'in-progress',
+    id: '진행중',
     title: '진행 중',
-    status: 'in-progress',
+    status: '진행중',
     color: 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30',
   },
   {
-    id: 'done',
+    id: '완료',
     title: '완료',
-    status: 'done',
+    status: '완료',
     color: 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30',
   },
 ];
@@ -53,7 +53,7 @@ const columns: KanbanColumn[] = [
 export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanBoardProps) {
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
-  const getTasksByStatus = (status: HierarchicalWBSTask['status']) => {
+  const getTasksByStatus = (status: Task['status']) => {
     return tasks.filter((task) => task.status === status);
   };
 
@@ -67,7 +67,7 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: HierarchicalWBSTask['status']) => {
+  const handleDrop = (e: React.DragEvent, newStatus: Task['status']) => {
     e.preventDefault();
     if (draggedTask) {
       onTaskStatusChange(draggedTask, newStatus);
@@ -100,7 +100,7 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">칸반 보드</h3>
         <div className="text-sm text-muted-foreground">
-          총 {tasks.length}개 작업 • 완료 {getTasksByStatus('done').length}개
+          총 {tasks.length}개 작업 • 완료 {getTasksByStatus('완료').length}개
         </div>
       </div>
 
@@ -129,11 +129,11 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
               <div className="space-y-3">
                 {columnTasks.map((task) => (
                   <Card
-                    key={task.id}
+                    key={task.task_id}
                     className="cursor-pointer hover:shadow-md transition-shadow bg-background"
                     draggable
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                    onClick={() => onTaskSelect?.(task.id)}
+                    onDragStart={(e) => handleDragStart(e, task.task_id)}
+                    onClick={() => onTaskSelect?.(task.task_id)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
@@ -147,18 +147,22 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onTaskStatusChange(task.id, 'todo')}>
+                            <DropdownMenuItem
+                              onClick={() => onTaskStatusChange(task.task_id, '할일')}
+                            >
                               할 일로 이동
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => onTaskStatusChange(task.id, 'in-progress')}
+                              onClick={() => onTaskStatusChange(task.task_id, '진행중')}
                             >
                               진행 중으로 이동
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onTaskStatusChange(task.id, 'done')}>
+                            <DropdownMenuItem
+                              onClick={() => onTaskStatusChange(task.task_id, '완료')}
+                            >
                               완료로 이동
                             </DropdownMenuItem>
-                            {/* <DropdownMenuItem onClick={() => onTaskStatusChange(task.id, "blocked")}>
+                            {/* <DropdownMenuItem onClick={() => onTaskStatusChange(task.task_id, "blocked")}>
                               차단됨으로 이동
                             </DropdownMenuItem> */}
                           </DropdownMenuContent>
@@ -195,16 +199,16 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-3 w-3" />
-                          <span>{formatDate(task.startDate)}</span>
+                          <span>{formatDate(task.start_date)}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="h-3 w-3" />
-                          <span>{task.duration}일</span>
+                          <span>{task.duration_days}일</span>
                         </div>
                       </div>
 
                       {/* 의존성 표시 */}
-                      {task.dependencies.length > 0 && (
+                      {[].length > 0 && (
                         <div className="mt-2 pt-2 border-t">
                           <div className="flex items-center space-x-1">
                             <span className="text-xs text-muted-foreground">의존성:</span>
