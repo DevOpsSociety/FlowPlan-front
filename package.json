@@ -15,6 +15,7 @@
     "generate:api:remote": "openapi-typescript-codegen --input $NEXT_PUBLIC_API_URL/openapi.json --output lib/generated --client fetch"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -50,6 +51,7 @@
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.5.1",
+    "gantt-task-react": "^0.3.9",
     "geist": "^1.3.1",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
@@ -66,7 +68,8 @@
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "zod": "3.25.76"
+    "zod": "3.25.76",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
