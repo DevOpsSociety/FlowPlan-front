@@ -279,7 +279,6 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                           </Avatar>
                           <div>
                             <div className="font-medium">{member.name}</div>
-                            <div className="text-sm text-muted-foreground">{member.email}</div>
                           </div>
                         </div>
                       </TableCell>
