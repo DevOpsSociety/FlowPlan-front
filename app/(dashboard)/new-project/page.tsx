@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
-import { NewProjectPage } from "@/features/project-creation/components/new-project-page";
-import { saveProject } from "@/shared/lib/storage";
-import router from "next/router";
-import { useState } from "react";
+import { NewProjectPage } from '@/features/project-creation/components/NewProjectPage';
+import { saveProject } from '@/shared/lib/storage';
+import router from 'next/router';
+import { useState } from 'react';
 
 export default function NewProject() {
   const [isLoading, setIsLoading] = useState(false);
-
 
   const handleProjectCreate = async (projectData: any) => {
     setIsLoading(true);

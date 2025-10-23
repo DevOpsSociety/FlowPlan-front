@@ -1,34 +1,34 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { ProjectListPage } from "@/features/projects/components/project-list-page"
-import { getCurrentProjectId } from "@/shared/lib/storage"
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { ProjectListPage } from '@/features/projects/components/ProjectListPage';
+import { getCurrentProjectId } from '@/shared/lib/storage';
 
 export default function Projects() {
-  const router = useRouter()
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null)
+  const router = useRouter();
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
 
   useEffect(() => {
-    const projectId = getCurrentProjectId()
-    setCurrentProjectId(projectId)
-  }, [router])
+    const projectId = getCurrentProjectId();
+    setCurrentProjectId(projectId);
+  }, [router]);
 
   const handleBack = () => {
     if (currentProjectId) {
-      router.push(`/project/${currentProjectId}`)
+      router.push(`/project/${currentProjectId}`);
     } else {
-      router.push("/")
+      router.push('/');
     }
-  }
+  };
 
   const handleSelectProject = (project: any) => {
-    router.push(`/project/${project.id}`)
-  }
+    router.push(`/project/${project.id}`);
+  };
 
   return (
     <div className="p-6">
       <ProjectListPage onBack={handleBack} onSelectProject={handleSelectProject} />
     </div>
-  )
+  );
 }
