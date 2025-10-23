@@ -103,6 +103,31 @@ export interface ActivityLog {
   createdAt: string;
 }
 
+// Task 상태 타입
+export type TaskStatus = '할일' | '진행중' | '완료' | '보류';
+
+// 백엔드 API Task 타입 (WBS 구조)
+export interface Task {
+  task_id: string;
+  parent_id: string | null;
+  name: string;
+  assignee: string;
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  duration_days: number;
+  progress: number; // 0-100
+  status: TaskStatus;
+  subtasks: Task[];
+}
+
+// 백엔드 API WBS 응답 타입
+export interface WBSResponse {
+  project_name: string;
+  wbs_structure: Task[];
+  total_tasks: number;
+  total_duration_days: number;
+}
+
 // 확장된 Task 타입 (협업 기능 포함)
 export interface CollaborativeTask {
   id: string;

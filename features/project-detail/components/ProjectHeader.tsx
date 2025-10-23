@@ -4,11 +4,11 @@ import { Save, Download, Users } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useToast } from '@/shared/hooks/useToast';
 import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
-import type { HierarchicalWBSTask } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 
 interface ProjectHeaderProps {
   project: any;
-  wbsTasks: HierarchicalWBSTask[];
+  wbsTasks: Task[];
   onShowTeam?: () => void;
 }
 
@@ -36,7 +36,7 @@ export function ProjectHeader({ project, wbsTasks, onShowTeam }: ProjectHeaderPr
           title: project.title || '새 프로젝트',
           description: project.description || '',
           teamSize: project.teamSize || 1,
-          duration: project.duration || 1,
+          duration: project.duration_days || 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           wbsTasks,
@@ -69,7 +69,7 @@ export function ProjectHeader({ project, wbsTasks, onShowTeam }: ProjectHeaderPr
       <div>
         <h1 className="text-3xl font-bold text-balance">{project.title}</h1>
         <p className="text-muted-foreground mt-1">
-          {project.teamSize}명 • {project.duration}개월 예상 • AI 생성됨
+          {project.teamSize}명 • {project.duration_days}개월 예상 • AI 생성됨
         </p>
         <div className="flex items-center mt-2 text-xs text-muted-foreground">
           <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getWBSTasks, addSyncListener } from '@/shared/lib/storage';
-import { mockHierarchicalWBSTasks, type HierarchicalWBSTask } from '@/shared/lib/mockData';
+import { mockHierarchicalWBSTasks } from '@/shared/lib/mockData';
+import type { Task } from '@/shared/lib/apiTypes';
 
 export function useProjectData(projectId: string) {
-  const [wbsTasks, setWbsTasks] = useState<HierarchicalWBSTask[]>([]);
+  const [wbsTasks, setWbsTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState<number>(Date.now());
 
