@@ -1,6 +1,6 @@
+import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
 
 // Zustand 스토어 상태 타입
 interface TaskState {

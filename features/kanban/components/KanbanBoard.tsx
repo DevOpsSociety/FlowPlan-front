@@ -1,78 +1,193 @@
 'use client';
 
-import type React from 'react';
-
-import { useState } from 'react';
-import { Calendar, Clock, MoreHorizontal } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/shared/ui/card';
-import { Badge } from '@/shared/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
-import { Button } from '@/shared/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/shared/ui/DropdownMenu';
 import type { Task } from '@/shared/lib/apiTypes';
+import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardHeader } from '@/shared/ui/card';
+import { Progress } from '@/shared/ui/progress';
+import type { DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import { Calendar, Clock, Save } from 'lucide-react';
+import { useState } from 'react';
 
 interface KanbanColumn {
-  id: string;
+  id: 'todo' | 'in-progress' | 'done' | 'blocked';
   title: string;
-  status: Task['status'];
   color: string;
 }
 
 interface KanbanBoardProps {
-  tasks: Task[];
-  onTaskStatusChange: (taskId: string, newStatus: Task['status']) => void;
-  onTaskSelect?: (taskId: string) => void;
+  projectId: string;
 }
+
+// Task 배열을 평탄화하는 함수
+const flattenTasks = (tasks: Task[]): Task[] => {
+  const result: Task[] = [];
+
+  const traverse = (taskList: Task[]) => {
+    for (const task of taskList) {
+      result.push(task);
+      if (task.subtasks && task.subtasks.length > 0) {
+        traverse(task.subtasks);
+      }
+    }
+  };
+
+  traverse(tasks);
+  return result;
+};
+
+// TaskStatus를 칸반 상태로 매핑
+const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' | 'blocked' => {
+  const mapping: Record<string, 'todo' | 'in-progress' | 'done' | 'blocked'> = {
+    할일: 'todo',
+    진행중: 'in-progress',
+    완료: 'done',
+    보류: 'blocked',
+  };
+  return mapping[status] || 'todo';
+};
+
+// 칸반 상태를 TaskStatus로 매핑
+const kanbanStatusToTaskStatus = (status: 'todo' | 'in-progress' | 'done' | 'blocked'): string => {
+  const mapping: Record<'todo' | 'in-progress' | 'done' | 'blocked', string> = {
+    todo: '할일',
+    'in-progress': '진행중',
+    done: '완료',
+    blocked: '보류',
+  };
+  return mapping[status];
+};
+
+// Task 배열을 칸반 컬럼별로 그룹화
+const groupTasksByStatus = (tasks: Task[]) => {
+  const flatTasks = flattenTasks(tasks);
+
+  return {
+    todo: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'todo'),
+    'in-progress': flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'in-progress'),
+    done: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'done'),
+    blocked: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'blocked'),
+  };
+};
 
 const columns: KanbanColumn[] = [
   {
-    id: '할일',
+    id: 'todo',
     title: '할 일',
-    status: '할일',
     color: 'bg-slate-100 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50',
   },
   {
-    id: '진행중',
+    id: 'in-progress',
     title: '진행 중',
-    status: '진행중',
     color: 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30',
   },
   {
-    id: '완료',
+    id: 'done',
     title: '완료',
-    status: '완료',
     color: 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30',
+  },
+  {
+    id: 'blocked',
+    title: '차단됨',
+    color: 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30',
   },
 ];
 
-export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanBoardProps) {
-  const [draggedTask, setDraggedTask] = useState<string | null>(null);
+export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
+  // 로컬 상태로 관리할 작업 데이터
+  const [localTasks, setLocalTasks] = useState<Task[]>(mockHierarchicalTasks);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const getTasksByStatus = (status: Task['status']) => {
-    return tasks.filter((task) => task.status === status);
-  };
+  // 칸반 컬럼별로 그룹화
+  const kanbanTasks = groupTasksByStatus(localTasks);
 
-  const handleDragStart = (e: React.DragEvent, taskId: string) => {
-    setDraggedTask(taskId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  // 드래그앤드롭 핸들러
+  const handleDragEnd = (result: DropResult) => {
+    const { destination, source, draggableId } = result;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
+    // 드롭 위치가 없으면 무시
+    if (!destination) return;
 
-  const handleDrop = (e: React.DragEvent, newStatus: Task['status']) => {
-    e.preventDefault();
-    if (draggedTask) {
-      onTaskStatusChange(draggedTask, newStatus);
-      setDraggedTask(null);
+    // 같은 위치로 드롭하면 무시
+    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+      return;
     }
+
+    // 상태 변경 - 로컬 상태 업데이트
+    const newStatus = kanbanStatusToTaskStatus(
+      destination.droppableId as 'todo' | 'in-progress' | 'done' | 'blocked'
+    );
+
+    console.log(`작업 상태 변경 (미저장): ${draggableId} -> ${newStatus}`);
+
+    // 재귀적으로 작업 업데이트
+    const updateTaskRecursively = (tasks: Task[]): Task[] => {
+      return tasks.map((task) => {
+        if (task.task_id === draggableId) {
+          // 상태에 따른 자동 진행률 업데이트
+          let updatedProgress = task.progress;
+          if (newStatus === '완료') {
+            updatedProgress = 100;
+          } else if (newStatus === '진행중' && task.progress === 0) {
+            updatedProgress = 10;
+          } else if (newStatus === '할일') {
+            updatedProgress = 0;
+          }
+
+          return { ...task, status: newStatus as Task['status'], progress: updatedProgress };
+        }
+        if (task.subtasks && task.subtasks.length > 0) {
+          return {
+            ...task,
+            subtasks: updateTaskRecursively(task.subtasks),
+          };
+        }
+        return task;
+      });
+    };
+
+    setLocalTasks((prev) => updateTaskRecursively(prev));
+    setHasUnsavedChanges(true); // 미저장 상태로 표시
+  };
+
+  // 저장 핸들러
+  const handleSaveKanban = () => {
+    console.log('=== 칸반보드 저장 시작 ===');
+    console.log('저장할 작업 데이터:', JSON.stringify(localTasks, null, 2));
+
+    // 각 상태별 작업 개수 출력
+    const statusCounts = {
+      할일: kanbanTasks.todo.length,
+      진행중: kanbanTasks['in-progress'].length,
+      완료: kanbanTasks.done.length,
+      차단됨: kanbanTasks.blocked.length,
+    };
+    console.log('상태별 작업 개수:', statusCounts);
+
+    // 전체 작업 평균 진행률 계산
+    const allTasks = flattenTasks(localTasks);
+    const avgProgress =
+      allTasks.length > 0
+        ? (allTasks.reduce((sum, task) => sum + task.progress, 0) / allTasks.length).toFixed(1)
+        : 0;
+    console.log(`전체 작업 개수: ${allTasks.length}개`);
+    console.log(`평균 진행률: ${avgProgress}%`);
+
+    // 실제로는 여기서 saveProject 호출 (추후 구현)
+    // const project = getCurrentProject();
+    // if (project) {
+    //   saveProject({
+    //     ...project,
+    //     wbsTasks: localTasks,
+    //     updatedAt: new Date().toISOString(),
+    //   });
+    // }
+
+    setHasUnsavedChanges(false);
+    console.log('=== 칸반보드 저장 완료 ===');
   };
 
   const getAssigneeInitials = (name: string) => {
@@ -85,155 +200,152 @@ export function KanbanBoard({ tasks, onTaskStatusChange, onTaskSelect }: KanbanB
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const getProgressColor = (progress: number) => {
-    if (progress >= 80) return 'bg-green-500';
-    if (progress >= 50) return 'bg-yellow-500';
-    if (progress >= 20) return 'bg-orange-500';
-    return 'bg-gray-300';
-  };
+  // 전체 작업 수 계산
+  const totalTasks =
+    kanbanTasks.todo.length +
+    kanbanTasks['in-progress'].length +
+    kanbanTasks.done.length +
+    kanbanTasks.blocked.length;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">칸반 보드</h3>
-        <div className="text-sm text-muted-foreground">
-          총 {tasks.length}개 작업 • 완료 {getTasksByStatus('완료').length}개
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            총 {totalTasks}개 작업 • 완료 {kanbanTasks.done.length}개
+          </div>
+          <Button
+            onClick={handleSaveKanban}
+            variant={hasUnsavedChanges ? 'default' : 'outline'}
+            size="sm"
+            className="gap-2"
+          >
+            <Save className="h-4 w-4" />
+            저장{hasUnsavedChanges && ' *'}
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {columns.map((column) => {
-          const columnTasks = getTasksByStatus(column.status);
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {columns.map((column) => {
+            const columnTasks = kanbanTasks[column.id];
 
-          return (
-            <div
-              key={column.id}
-              className={`rounded-lg p-4 min-h-[500px] ${column.color}`}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, column.status)}
-            >
-              {/* 컬럼 헤더 */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <h4 className="font-semibold text-foreground">{column.title}</h4>
-                  <Badge variant="secondary" className="text-xs">
-                    {columnTasks.length}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* 작업 카드들 */}
-              <div className="space-y-3">
-                {columnTasks.map((task) => (
-                  <Card
-                    key={task.task_id}
-                    className="cursor-pointer hover:shadow-md transition-shadow bg-background"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, task.task_id)}
-                    onClick={() => onTaskSelect?.(task.task_id)}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <h5 className="font-medium text-sm leading-tight line-clamp-2">
-                          {task.name}
-                        </h5>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => onTaskStatusChange(task.task_id, '할일')}
-                            >
-                              할 일로 이동
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onTaskStatusChange(task.task_id, '진행중')}
-                            >
-                              진행 중으로 이동
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onTaskStatusChange(task.task_id, '완료')}
-                            >
-                              완료로 이동
-                            </DropdownMenuItem>
-                            {/* <DropdownMenuItem onClick={() => onTaskStatusChange(task.task_id, "blocked")}>
-                              차단됨으로 이동
-                            </DropdownMenuItem> */}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      {/* 진행률 바 */}
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-muted-foreground">진행률</span>
-                          <span className="text-xs font-medium">{task.progress}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${getProgressColor(task.progress)}`}
-                            style={{ width: `${task.progress}%` }}
-                          />
+            return (
+              <div key={column.id}>
+                <Droppable droppableId={String(column.id)}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`rounded-lg p-4 min-h-[500px] transition-colors ${column.color} ${
+                        snapshot.isDraggingOver ? 'ring-2 ring-primary' : ''
+                      }`}
+                    >
+                      {/* 컬럼 헤더 */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold text-foreground">{column.title}</h4>
+                          <Badge variant="secondary" className="text-xs">
+                            {columnTasks.length}
+                          </Badge>
                         </div>
                       </div>
 
-                      {/* 담당자 */}
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={`/ceholder-svg-height-24.jpg?height=24&width=24`} />
-                          <AvatarFallback className="text-xs">
-                            {getAssigneeInitials(task.assignee)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs text-muted-foreground">{task.assignee}</span>
-                      </div>
+                      {/* 작업 카드들 */}
+                      <div className="space-y-3">
+                        {columnTasks.map((task: Task, index: number) => (
+                          <Draggable
+                            key={`${column.id}-${task.task_id}`}
+                            draggableId={String(task.task_id)}
+                            index={index}
+                          >
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                              >
+                                <Card
+                                  className={`cursor-pointer hover:shadow-md transition-shadow bg-background ${
+                                    dragSnapshot.isDragging ? 'shadow-lg rotate-2' : ''
+                                  }`}
+                                >
+                                  <CardHeader className="pb-2">
+                                    <div className="flex items-start justify-between">
+                                      <h5 className="font-medium text-sm leading-tight line-clamp-2">
+                                        {task.name}
+                                      </h5>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="pt-0">
+                                    {/* 진행률 */}
+                                    <div className="mb-3">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="text-xs text-muted-foreground">
+                                          진행률
+                                        </span>
+                                        <span className="text-xs font-medium">
+                                          {task.progress}%
+                                        </span>
+                                      </div>
+                                      <Progress value={task.progress} className="h-1.5" />
+                                    </div>
 
-                      {/* 날짜 정보 */}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatDate(task.start_date)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{task.duration_days}일</span>
-                        </div>
-                      </div>
+                                    {/* 담당자 */}
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <Avatar className="h-6 w-6">
+                                        <AvatarFallback className="text-xs">
+                                          {getAssigneeInitials(task.assignee)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span className="text-xs text-muted-foreground">
+                                        {task.assignee}
+                                      </span>
+                                    </div>
 
-                      {/* 의존성 표시 */}
-                      {[].length > 0 && (
-                        <div className="mt-2 pt-2 border-t">
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs text-muted-foreground">의존성:</span>
-                            <Badge variant="outline" className="text-xs">
-                              {task.dependencies.length}개
-                            </Badge>
+                                    {/* 날짜 정보 */}
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                      <div className="flex items-center space-x-1">
+                                        <Calendar className="h-3 w-3" />
+                                        <span>
+                                          {formatDate(task.start_date)} ~{' '}
+                                          {formatDate(task.end_date)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center space-x-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{task.duration_days}일</span>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+
+                        {/* 빈 상태 */}
+                        {columnTasks.length === 0 && (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <div className="text-sm">작업이 없습니다</div>
+                            <div className="text-xs mt-1">작업을 여기로 드래그하세요</div>
                           </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {/* 빈 상태 */}
-                {columnTasks.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <div className="text-sm">작업이 없습니다</div>
-                    <div className="text-xs mt-1">작업을 여기로 드래그하세요</div>
-                  </div>
-                )}
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
     </div>
   );
 }
