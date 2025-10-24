@@ -6,14 +6,16 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Progress } from '@/shared/ui/progress';
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { Calendar, Clock, Save } from 'lucide-react';
+import { Calendar, Clock, ListChecks, Save } from 'lucide-react';
 import { useState } from 'react';
 
 interface KanbanColumn {
-  id: 'todo' | 'in-progress' | 'done' | 'blocked';
+  id: 'todo' | 'in-progress' | 'done';
   title: string;
   color: string;
 }
@@ -40,36 +42,37 @@ const flattenTasks = (tasks: Task[]): Task[] => {
 };
 
 // TaskStatus를 칸반 상태로 매핑
-const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' | 'blocked' => {
-  const mapping: Record<string, 'todo' | 'in-progress' | 'done' | 'blocked'> = {
+const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' => {
+  const mapping: Record<string, 'todo' | 'in-progress' | 'done'> = {
     할일: 'todo',
     진행중: 'in-progress',
     완료: 'done',
-    보류: 'blocked',
+    보류: 'todo', // 보류는 할일로 매핑
   };
   return mapping[status] || 'todo';
 };
 
 // 칸반 상태를 TaskStatus로 매핑
-const kanbanStatusToTaskStatus = (status: 'todo' | 'in-progress' | 'done' | 'blocked'): string => {
-  const mapping: Record<'todo' | 'in-progress' | 'done' | 'blocked', string> = {
+const kanbanStatusToTaskStatus = (status: 'todo' | 'in-progress' | 'done'): string => {
+  const mapping: Record<'todo' | 'in-progress' | 'done', string> = {
     todo: '할일',
     'in-progress': '진행중',
     done: '완료',
-    blocked: '보류',
   };
   return mapping[status];
 };
 
-// Task 배열을 칸반 컬럼별로 그룹화
+// Task 배열을 칸반 컬럼별로 그룹화 (최상위 작업만)
 const groupTasksByStatus = (tasks: Task[]) => {
-  const flatTasks = flattenTasks(tasks);
+  // subtasks를 제외하고 최상위 작업만 사용
+  const topLevelTasks = tasks.filter((t) => t.parent_id === null);
 
   return {
-    todo: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'todo'),
-    'in-progress': flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'in-progress'),
-    done: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'done'),
-    blocked: flatTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'blocked'),
+    todo: topLevelTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'todo'),
+    'in-progress': topLevelTasks.filter(
+      (t) => taskStatusToKanbanStatus(t.status) === 'in-progress'
+    ),
+    done: topLevelTasks.filter((t) => taskStatusToKanbanStatus(t.status) === 'done'),
   };
 };
 
@@ -88,11 +91,6 @@ const columns: KanbanColumn[] = [
     id: 'done',
     title: '완료',
     color: 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30',
-  },
-  {
-    id: 'blocked',
-    title: '차단됨',
-    color: 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30',
   },
 ];
 
@@ -118,7 +116,7 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
 
     // 상태 변경 - 로컬 상태 업데이트
     const newStatus = kanbanStatusToTaskStatus(
-      destination.droppableId as 'todo' | 'in-progress' | 'done' | 'blocked'
+      destination.droppableId as 'todo' | 'in-progress' | 'done'
     );
 
     console.log(`작업 상태 변경 (미저장): ${draggableId} -> ${newStatus}`);
@@ -163,7 +161,6 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
       할일: kanbanTasks.todo.length,
       진행중: kanbanTasks['in-progress'].length,
       완료: kanbanTasks.done.length,
-      차단됨: kanbanTasks.blocked.length,
     };
     console.log('상태별 작업 개수:', statusCounts);
 
@@ -203,12 +200,45 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   };
 
+  // 하위 작업 상태 아이콘 생성
+  const getSubtaskStatusIcons = (subtasks: Task[]) => {
+    return subtasks.map((subtask) => {
+      if (subtask.progress === 100) return '●'; // 완료
+      if (subtask.progress > 0) return '◐'; // 진행중
+      return '○'; // 미완료
+    });
+  };
+
+  // 하위 작업 완료 상태 토글
+  const toggleSubtaskCompletion = (parentTaskId: string, subtaskId: string) => {
+    setLocalTasks((prev) => {
+      return prev.map((task) => {
+        if (task.task_id === parentTaskId && task.subtasks) {
+          const updatedSubtasks = task.subtasks.map((subtask) => {
+            if (subtask.task_id === subtaskId) {
+              // 완료 상태 토글: 100% <-> 0%
+              const newProgress = subtask.progress === 100 ? 0 : 100;
+              const newStatus = newProgress === 100 ? '완료' : '할일';
+              return { ...subtask, progress: newProgress, status: newStatus as Task['status'] };
+            }
+            return subtask;
+          });
+
+          // 부모 작업의 진행률 재계산
+          const completedCount = updatedSubtasks.filter((s) => s.progress === 100).length;
+          const parentProgress = Math.round((completedCount / updatedSubtasks.length) * 100);
+
+          return { ...task, subtasks: updatedSubtasks, progress: parentProgress };
+        }
+        return task;
+      });
+    });
+    setHasUnsavedChanges(true);
+  };
+
   // 전체 작업 수 계산
   const totalTasks =
-    kanbanTasks.todo.length +
-    kanbanTasks['in-progress'].length +
-    kanbanTasks.done.length +
-    kanbanTasks.blocked.length;
+    kanbanTasks.todo.length + kanbanTasks['in-progress'].length + kanbanTasks.done.length;
 
   return (
     <div className="space-y-4">
@@ -231,7 +261,7 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
       </div>
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {columns.map((column) => {
             const columnTasks = kanbanTasks[column.id];
 
@@ -282,9 +312,9 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
                                       </h5>
                                     </div>
                                   </CardHeader>
-                                  <CardContent className="pt-0">
+                                  <CardContent className="pt-0 space-y-3">
                                     {/* 진행률 */}
-                                    <div className="mb-3">
+                                    <div>
                                       <div className="flex items-center justify-between mb-1">
                                         <span className="text-xs text-muted-foreground">
                                           진행률
@@ -297,7 +327,7 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
                                     </div>
 
                                     {/* 담당자 */}
-                                    <div className="flex items-center space-x-2 mb-2">
+                                    <div className="flex items-center space-x-2">
                                       <Avatar className="h-6 w-6">
                                         <AvatarFallback className="text-xs">
                                           {getAssigneeInitials(task.assignee)}
@@ -322,6 +352,81 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
                                         <span>{task.duration_days}일</span>
                                       </div>
                                     </div>
+
+                                    {/* 하위 작업 체크리스트 (Popover) */}
+                                    {task.subtasks && task.subtasks.length > 0 && (
+                                      <div className="pt-2 border-t border-border">
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <button
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="flex items-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                            >
+                                              <ListChecks className="h-3.5 w-3.5" />
+                                              <span>
+                                                {
+                                                  task.subtasks.filter((s) => s.progress === 100)
+                                                    .length
+                                                }
+                                                /{task.subtasks.length} 완료
+                                              </span>
+                                              <span className="flex gap-0.5 ml-auto">
+                                                {getSubtaskStatusIcons(task.subtasks).map(
+                                                  (icon, idx) => (
+                                                    <span key={idx} className="text-xs">
+                                                      {icon}
+                                                    </span>
+                                                  )
+                                                )}
+                                              </span>
+                                            </button>
+                                          </PopoverTrigger>
+                                          <PopoverContent
+                                            className="w-80 p-3"
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <div className="space-y-2">
+                                              <h6 className="font-medium text-sm mb-3">
+                                                하위 작업
+                                              </h6>
+                                              {task.subtasks.map((subtask) => (
+                                                <div
+                                                  key={subtask.task_id}
+                                                  className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                                                >
+                                                  <Checkbox
+                                                    checked={subtask.progress === 100}
+                                                    onCheckedChange={() =>
+                                                      toggleSubtaskCompletion(
+                                                        task.task_id,
+                                                        subtask.task_id
+                                                      )
+                                                    }
+                                                    className="mt-0.5"
+                                                  />
+                                                  <div className="flex-1 space-y-1">
+                                                    <p
+                                                      className={`text-sm ${
+                                                        subtask.progress === 100
+                                                          ? 'line-through text-muted-foreground'
+                                                          : ''
+                                                      }`}
+                                                    >
+                                                      {subtask.name}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                      <span>{subtask.assignee}</span>
+                                                      <span>•</span>
+                                                      <span>{subtask.progress}%</span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
+                                    )}
                                   </CardContent>
                                 </Card>
                               </div>
