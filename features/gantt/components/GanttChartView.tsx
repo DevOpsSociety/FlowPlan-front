@@ -4,7 +4,7 @@ import { useToast } from '@/shared/hooks/useToast';
 import type { Task } from '@/shared/lib/apiTypes';
 import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
 import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
-import { toGanttTask } from '@/shared/lib/taskAdapters';
+import { toGanttTask, convertGanttTasksToHierarchical } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import type { Task as GanttTask } from 'gantt-task-react';
@@ -85,9 +85,12 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
 
       const currentProject = getCurrentProject();
       if (currentProject) {
+        // localTasks(GanttTask[])를 계층 구조의 Task[]로 역변환
+        const convertedTasks = convertGanttTasksToHierarchical(localTasks, mockHierarchicalTasks);
+
         const updatedProject: StoredProject = {
           ...currentProject,
-          wbsTasks: mockHierarchicalTasks, // TODO: localTasks를 Task[] 형식으로 역변환하여 저장
+          wbsTasks: convertedTasks,
           updatedAt: new Date().toISOString(),
         };
         saveProject(updatedProject);

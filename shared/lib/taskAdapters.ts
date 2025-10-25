@@ -125,3 +125,53 @@ export const flattenTasks = (tasks: Task[]): Task[] => {
   traverse(tasks);
   return result;
 };
+
+/**
+ * 평탄화된 GanttTask 배열을 계층 구조의 Task 배열로 역변환
+ * Gantt 차트 저장 시 사용
+ * @param ganttTasks - 평탄화된 GanttTask 배열
+ * @param originalTasks - 원본 Task 배열 (구조 참조용)
+ * @returns 계층 구조가 복원된 Task 배열
+ */
+export const convertGanttTasksToHierarchical = (
+  ganttTasks: GanttTask[],
+  originalTasks: Task[]
+): Task[] => {
+  // GanttTask를 task_id로 빠르게 찾기 위한 Map 생성
+  const ganttTaskMap = new Map<string, GanttTask>();
+  ganttTasks.forEach((gt) => {
+    ganttTaskMap.set(gt.id, gt);
+  });
+
+  // 원본 Task를 순회하며 GanttTask의 변경사항을 적용
+  const updateTask = (task: Task): Task => {
+    const ganttTask = ganttTaskMap.get(task.task_id);
+
+    // GanttTask가 있으면 변경사항 적용
+    const updatedTask: Task = ganttTask
+      ? {
+          ...task,
+          start_date: ganttTask.start.toISOString().split('T')[0],
+          end_date: ganttTask.end.toISOString().split('T')[0],
+          duration_days:
+            Math.ceil(
+              (ganttTask.end.getTime() - ganttTask.start.getTime()) / (1000 * 60 * 60 * 24)
+            ) || 1,
+          progress: ganttTask.progress,
+          name: ganttTask.name,
+        }
+      : task;
+
+    // subtasks가 있으면 재귀적으로 업데이트
+    if (task.subtasks && task.subtasks.length > 0) {
+      return {
+        ...updatedTask,
+        subtasks: task.subtasks.map(updateTask),
+      };
+    }
+
+    return updatedTask;
+  };
+
+  return originalTasks.map(updateTask);
+};
