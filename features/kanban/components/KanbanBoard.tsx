@@ -2,6 +2,7 @@
 
 import type { Task } from '@/shared/lib/apiTypes';
 import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
+import { flattenTasks } from '@/shared/lib/taskAdapters';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -23,23 +24,6 @@ interface KanbanColumn {
 interface KanbanBoardProps {
   projectId: string;
 }
-
-// Task 배열을 평탄화하는 함수
-const flattenTasks = (tasks: Task[]): Task[] => {
-  const result: Task[] = [];
-
-  const traverse = (taskList: Task[]) => {
-    for (const task of taskList) {
-      result.push(task);
-      if (task.subtasks && task.subtasks.length > 0) {
-        traverse(task.subtasks);
-      }
-    }
-  };
-
-  traverse(tasks);
-  return result;
-};
 
 // TaskStatus를 칸반 상태로 매핑
 const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' => {

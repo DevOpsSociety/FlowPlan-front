@@ -13,8 +13,8 @@ import 'gantt-task-react/dist/index.css';
 import { Save } from 'lucide-react';
 import { useState } from 'react';
 
-// 계층 구조 Task를 평탄화하여 GanttTask 배열로 변환
-const flattenTasks = (tasks: Task[]): GanttTask[] => {
+// 계층 구조 Task를 평탄화하고 GanttTask로 변환
+const convertToGanttTasks = (tasks: Task[]): GanttTask[] => {
   const result: GanttTask[] = [];
 
   const traverse = (taskList: Task[], parentId?: string) => {
@@ -60,7 +60,7 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
 
   // 로컬 상태로 관리할 작업 데이터 (수정사항이 여기에 반영됨)
   const [localTasks, setLocalTasks] = useState<GanttTask[]>(() =>
-    flattenTasks(mockHierarchicalTasks)
+    convertToGanttTasks(mockHierarchicalTasks)
   );
 
   // 수정사항 추적

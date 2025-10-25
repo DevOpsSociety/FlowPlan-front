@@ -109,3 +109,25 @@ export const calculateEndDateFromDuration = (startDate: string, durationDays: nu
   end.setDate(start.getDate() + durationDays);
   return end.toISOString().split('T')[0];
 };
+
+/**
+ * 계층 구조의 Task 배열을 평탄화
+ * Gantt 차트와 Kanban 보드에서 모든 작업을 단일 배열로 처리할 때 사용
+ * @param tasks - 계층 구조를 가진 Task 배열
+ * @returns 평탄화된 Task 배열
+ */
+export const flattenTasks = (tasks: Task[]): Task[] => {
+  const result: Task[] = [];
+
+  const traverse = (taskList: Task[]) => {
+    for (const task of taskList) {
+      result.push(task);
+      if (task.subtasks && task.subtasks.length > 0) {
+        traverse(task.subtasks);
+      }
+    }
+  };
+
+  traverse(tasks);
+  return result;
+};

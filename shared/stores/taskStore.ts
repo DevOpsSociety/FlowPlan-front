@@ -1,4 +1,5 @@
 import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
+import { flattenTasks } from '@/shared/lib/taskAdapters';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 
@@ -97,21 +98,6 @@ const addTaskRecursive = (tasks: Task[], newTask: Task, parentId?: string): Task
     }
     return task;
   });
-};
-
-// 평탄화 헬퍼 함수 (간트차트용)
-const flattenTasks = (tasks: Task[]): Task[] => {
-  const result: Task[] = [];
-  const traverse = (taskList: Task[]) => {
-    for (const task of taskList) {
-      result.push(task);
-      if (task.subtasks && task.subtasks.length > 0) {
-        traverse(task.subtasks);
-      }
-    }
-  };
-  traverse(tasks);
-  return result;
 };
 
 // 상태별 그룹화 헬퍼 함수 (칸반보드용)
