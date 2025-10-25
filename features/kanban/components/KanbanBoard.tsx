@@ -176,30 +176,35 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
     });
   };
 
-  // 하위 작업 완료 상태 토글
+  // 하위 작업 상태 토글 (완료 <-> 할일)
+  const toggleSubtaskStatus = (subtask: Task, targetSubtaskId: string): Task => {
+    if (subtask.task_id !== targetSubtaskId) return subtask;
+
+    const newStatus: Task['status'] = subtask.status === '완료' ? '할일' : '완료';
+    return { ...subtask, status: newStatus };
+  };
+
+  // 완료된 하위 작업 개수로 부모 진행률 계산
+  const calculateParentProgress = (subtasks: Task[]): number => {
+    const completedCount = subtasks.filter((s) => s.status === '완료').length;
+    return Math.round((completedCount / subtasks.length) * 100);
+  };
+
+  // 부모 작업의 하위 작업 업데이트
+  const updateTaskWithSubtasks = (task: Task, parentTaskId: string, subtaskId: string): Task => {
+    if (task.task_id !== parentTaskId || !task.subtasks) return task;
+
+    const updatedSubtasks = task.subtasks.map((subtask) => toggleSubtaskStatus(subtask, subtaskId));
+    const parentProgress = calculateParentProgress(updatedSubtasks);
+
+    return { ...task, subtasks: updatedSubtasks, progress: parentProgress };
+  };
+
+  // 하위 작업 완료 상태 토글 (메인 함수)
   const toggleSubtaskCompletion = (parentTaskId: string, subtaskId: string) => {
-    setLocalTasks((prev) => {
-      return prev.map((task) => {
-        if (task.task_id === parentTaskId && task.subtasks) {
-          const updatedSubtasks = task.subtasks.map((subtask) => {
-            if (subtask.task_id === subtaskId) {
-              // 완료 상태 토글: 100% <-> 0%
-              const newProgress = subtask.progress === 100 ? 0 : 100;
-              const newStatus = newProgress === 100 ? '완료' : '할일';
-              return { ...subtask, progress: newProgress, status: newStatus as Task['status'] };
-            }
-            return subtask;
-          });
-
-          // 부모 작업의 진행률 재계산
-          const completedCount = updatedSubtasks.filter((s) => s.progress === 100).length;
-          const parentProgress = Math.round((completedCount / updatedSubtasks.length) * 100);
-
-          return { ...task, subtasks: updatedSubtasks, progress: parentProgress };
-        }
-        return task;
-      });
-    });
+    setLocalTasks((prev) =>
+      prev.map((task) => updateTaskWithSubtasks(task, parentTaskId, subtaskId))
+    );
     setHasUnsavedChanges(true);
   };
 
@@ -362,7 +367,7 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
                                                   className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
                                                 >
                                                   <Checkbox
-                                                    checked={subtask.progress === 100}
+                                                    checked={subtask.status === '완료'}
                                                     onCheckedChange={() =>
                                                       toggleSubtaskCompletion(
                                                         task.task_id,
@@ -374,7 +379,7 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
                                                   <div className="flex-1 space-y-1">
                                                     <p
                                                       className={`text-sm ${
-                                                        subtask.progress === 100
+                                                        subtask.status === '완료'
                                                           ? 'line-through text-muted-foreground'
                                                           : ''
                                                       }`}
