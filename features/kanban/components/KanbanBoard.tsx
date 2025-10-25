@@ -2,7 +2,11 @@
 
 import type { Task } from '@/shared/lib/apiTypes';
 import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
-import { flattenTasks } from '@/shared/lib/taskAdapters';
+import {
+  flattenTasks,
+  taskStatusToKanbanStatus,
+  kanbanStatusToTaskStatus,
+} from '@/shared/lib/taskAdapters';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -24,27 +28,6 @@ interface KanbanColumn {
 interface KanbanBoardProps {
   projectId: string;
 }
-
-// TaskStatus를 칸반 상태로 매핑
-const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' => {
-  const mapping: Record<string, 'todo' | 'in-progress' | 'done'> = {
-    할일: 'todo',
-    진행중: 'in-progress',
-    완료: 'done',
-    보류: 'todo', // 보류는 할일로 매핑
-  };
-  return mapping[status] || 'todo';
-};
-
-// 칸반 상태를 TaskStatus로 매핑
-const kanbanStatusToTaskStatus = (status: 'todo' | 'in-progress' | 'done'): string => {
-  const mapping: Record<'todo' | 'in-progress' | 'done', string> = {
-    todo: '할일',
-    'in-progress': '진행중',
-    done: '완료',
-  };
-  return mapping[status];
-};
 
 // Task 배열을 칸반 컬럼별로 그룹화 (최상위 작업만)
 const groupTasksByStatus = (tasks: Task[]) => {

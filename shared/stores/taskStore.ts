@@ -26,7 +26,6 @@ interface TaskState {
     todo: Task[];
     'in-progress': Task[];
     done: Task[];
-    blocked: Task[];
   };
 }
 
@@ -105,18 +104,16 @@ const groupTasksByStatus = (tasks: Task[]) => {
   const flatTasks = flattenTasks(tasks);
 
   // Task의 status 타입을 칸반 상태로 매핑
-  const statusMapping: Record<TaskStatus, 'todo' | 'in-progress' | 'done' | 'blocked'> = {
+  const statusMapping: Record<TaskStatus, 'todo' | 'in-progress' | 'done'> = {
     할일: 'todo',
     진행중: 'in-progress',
     완료: 'done',
-    보류: 'blocked',
   };
 
   return {
     todo: flatTasks.filter((t) => statusMapping[t.status] === 'todo'),
     'in-progress': flatTasks.filter((t) => statusMapping[t.status] === 'in-progress'),
     done: flatTasks.filter((t) => statusMapping[t.status] === 'done'),
-    blocked: flatTasks.filter((t) => statusMapping[t.status] === 'blocked'),
   };
 };
 

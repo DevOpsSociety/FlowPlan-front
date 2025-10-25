@@ -55,13 +55,12 @@ export const toGanttTask = (task: Task, parentId?: string): GanttTask => {
  * 칸반보드에서 드래그앤드롭 시 사용
  */
 export const kanbanStatusToTaskStatus = (
-  kanbanStatus: 'todo' | 'in-progress' | 'done' | 'blocked'
+  kanbanStatus: 'todo' | 'in-progress' | 'done'
 ): TaskStatus => {
-  const statusMapping: Record<'todo' | 'in-progress' | 'done' | 'blocked', TaskStatus> = {
+  const statusMapping: Record<'todo' | 'in-progress' | 'done', TaskStatus> = {
     todo: '할일',
     'in-progress': '진행중',
     done: '완료',
-    blocked: '보류',
   };
 
   return statusMapping[kanbanStatus];
@@ -69,19 +68,15 @@ export const kanbanStatusToTaskStatus = (
 
 /**
  * Task의 status를 칸반 상태로 변환
- * 칸반보드 렌더링 시 사용
+ * 칸반보드는 3칸 레이아웃(할일/진행중/완료) 사용
  */
-export const taskStatusToKanbanStatus = (
-  taskStatus: TaskStatus
-): 'todo' | 'in-progress' | 'done' | 'blocked' => {
-  const statusMapping: Record<TaskStatus, 'todo' | 'in-progress' | 'done' | 'blocked'> = {
+export const taskStatusToKanbanStatus = (status: string): 'todo' | 'in-progress' | 'done' => {
+  const mapping: Record<string, 'todo' | 'in-progress' | 'done'> = {
     할일: 'todo',
     진행중: 'in-progress',
     완료: 'done',
-    보류: 'blocked',
   };
-
-  return statusMapping[taskStatus];
+  return mapping[status] || 'todo';
 };
 
 /**
@@ -93,7 +88,6 @@ export const calculateProgressFromStatus = (status: TaskStatus): number => {
     할일: 0,
     진행중: 50,
     완료: 100,
-    보류: 0,
   };
 
   return progressMapping[status];
