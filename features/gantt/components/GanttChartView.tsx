@@ -1,151 +1,253 @@
 'use client';
 
-import type React from 'react';
-
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Edit } from 'lucide-react';
+import { useToast } from '@/shared/hooks/useToast';
+import type { Task } from '@/shared/lib/apiTypes';
+import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
+import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
+import { toGanttTask, convertGanttTasksToHierarchical } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import type { Task } from '@/shared/lib/apiTypes';
+import type { Task as GanttTask } from 'gantt-task-react';
+import { Gantt, ViewMode } from 'gantt-task-react';
+import 'gantt-task-react/dist/index.css';
+import { Save } from 'lucide-react';
+import { useState } from 'react';
+
+// 계층 구조 Task를 평탄화하고 GanttTask로 변환
+const convertToGanttTasks = (tasks: Task[]): GanttTask[] => {
+  const result: GanttTask[] = [];
+
+  const traverse = (taskList: Task[], parentId?: string) => {
+    for (const task of taskList) {
+      result.push(toGanttTask(task, parentId));
+      if (task.subtasks && task.subtasks.length > 0) {
+        traverse(task.subtasks, task.task_id);
+      }
+    }
+  };
+
+  traverse(tasks);
+  return result;
+};
+
+// 커스텀 헤더 컴포넌트 (Name만 표시)
+const TaskListHeader = () => {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        height: '50px',
+        alignItems: 'center',
+        backgroundColor: '#f9fafb',
+        borderBottom: '2px solid #e5e7eb',
+        fontWeight: 600,
+        fontSize: '14px',
+      }}
+    >
+      <div style={{ minWidth: '200px', width: '200px', padding: '0 12px' }}>Name</div>
+    </div>
+  );
+};
 
 interface GanttChartViewProps {
-  tasks: Task[];
-  onTaskSelect?: (taskId: string) => void;
-  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
-  selectedTaskId?: string | null;
+  projectId: string;
 }
 
-export function GanttChartView({
-  tasks,
-  onTaskSelect,
-  onTaskUpdate,
-  selectedTaskId,
-}: GanttChartViewProps) {
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 1));
-  const [draggedTask, setDraggedTask] = useState<string | null>(null);
+export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
+  const [viewModeString, setViewModeString] = useState<string>('Day');
+  const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set());
+  const { toast } = useToast();
 
-  const getFlatTaskList = (taskList: Task[], depth = 0): Array<Task & { depth: number }> => {
-    const flatTasks: Array<Task & { depth: number }> = [];
+  // 로컬 상태로 관리할 작업 데이터 (수정사항이 여기에 반영됨)
+  const [localTasks, setLocalTasks] = useState<GanttTask[]>(() =>
+    convertToGanttTasks(mockHierarchicalTasks)
+  );
 
-    taskList.forEach((task) => {
-      flatTasks.push({ ...task, depth });
-      if (task.subtasks && task.subtasks.length > 0) {
-        flatTasks.push(...getFlatTaskList(task.subtasks, depth + 1));
+  // 수정사항 추적
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // 저장 핸들러 - 저장 버튼 클릭 시에만 실행
+  const handleSaveGantt = () => {
+    try {
+      console.log('=== 간트차트 저장 데이터 ===');
+      console.log('저장할 작업 목록:', localTasks);
+      console.log('총 작업 수:', localTasks.length);
+      console.log('수정된 작업들:');
+      localTasks.forEach((task) => {
+        console.log(`- [${task.id}] ${task.name}:`, {
+          start: task.start,
+          end: task.end,
+          progress: task.progress,
+          type: task.type,
+        });
+      });
+      console.log('===========================');
+
+      const currentProject = getCurrentProject();
+      if (currentProject) {
+        // localTasks(GanttTask[])를 계층 구조의 Task[]로 역변환
+        const convertedTasks = convertGanttTasksToHierarchical(localTasks, mockHierarchicalTasks);
+
+        const updatedProject: StoredProject = {
+          ...currentProject,
+          wbsTasks: convertedTasks,
+          updatedAt: new Date().toISOString(),
+        };
+        saveProject(updatedProject);
+
+        setHasUnsavedChanges(false);
+
+        toast({
+          title: '간트차트가 저장되었습니다',
+          description: `${localTasks.length}개의 작업이 저장되었습니다. (콘솔 확인)`,
+        });
+      } else {
+        toast({
+          title: '저장할 프로젝트가 없습니다',
+          description: '프로젝트를 먼저 생성해주세요.',
+          variant: 'destructive',
+        });
       }
+    } catch (error) {
+      console.error('저장 오류:', error);
+      toast({
+        title: '저장 실패',
+        description: '간트차트 저장 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 접힌 프로젝트의 모든 하위 작업 ID 수집
+  const getCollapsedTaskIds = () => {
+    const hiddenIds = new Set<string>();
+    collapsedTasks.forEach((collapsedId) => {
+      localTasks.forEach((task) => {
+        // task.project가 접힌 프로젝트 ID와 일치하면 숨김
+        if (task.project === collapsedId) {
+          hiddenIds.add(task.id);
+        }
+      });
+    });
+    return hiddenIds;
+  };
+
+  const hiddenTaskIds = getCollapsedTaskIds();
+
+  // 접힌 작업의 하위 작업 필터링
+  const ganttTaskList: GanttTask[] = localTasks
+    .filter((task) => {
+      // 자신의 ID가 hiddenTaskIds에 있으면 숨김
+      if (hiddenTaskIds.has(task.id)) {
+        return false;
+      }
+      return true;
+    })
+    .map((task) => {
+      // task가 project이고 collapsed 상태면 hideChildren = true
+      if (task.type === 'project' && collapsedTasks.has(task.id)) {
+        return { ...task, hideChildren: true };
+      }
+      return task;
     });
 
-    return flatTasks;
-  };
+  // 문자열을 ViewMode enum으로 변환
+  const viewMode = ViewMode[viewModeString as keyof typeof ViewMode];
 
-  const flatTasks = getFlatTaskList(tasks);
+  // 커스텀 테이블 컴포넌트 (Name만 표시, 접기/펼치기 기능 포함)
+  const TaskListTable = ({
+    tasks,
+    rowHeight,
+    onExpanderClick,
+  }: {
+    tasks: GanttTask[];
+    rowHeight: number;
+    onExpanderClick: (task: GanttTask) => void;
+  }) => {
+    return (
+      <div>
+        {tasks.map((task) => {
+          const isProject = task.type === 'project';
+          const isMilestone = task.type === 'milestone';
+          const isCollapsed = task.hideChildren === true;
 
-  const navigateDate = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    if (viewMode === 'day') {
-      newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
-    } else if (viewMode === 'week') {
-      newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
-    } else {
-      newDate.setFullYear(currentDate.getFullYear() + (direction === 'next' ? 1 : -1));
-    }
-    setCurrentDate(newDate);
-  };
-
-  const getTaskColor = (task: Task) => {
-    if (task.status === '완료') return 'bg-green-500';
-    if (task.status === '진행중') return 'bg-blue-500';
-    if (task.status === '할일') return 'bg-gray-400';
-    return 'bg-gray-400';
-  };
-
-  const calculateBarPosition = (task: Task) => {
-    const startDate = new Date(task.start_date);
-    const endDate = new Date(task.end_date);
-
-    const startDiff = Math.floor(
-      (startDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
+          return (
+            <div
+              key={task.id}
+              style={{
+                display: 'flex',
+                height: `${rowHeight}px`,
+                alignItems: 'center',
+                borderBottom: '1px solid #e5e7eb',
+                backgroundColor: isProject ? '#f9fafb' : '#ffffff',
+                fontSize: '13px',
+                cursor: isProject ? 'pointer' : 'default',
+              }}
+              onClick={isProject ? () => onExpanderClick(task) : undefined}
+            >
+              <div
+                style={{
+                  minWidth: '200px',
+                  width: '200px',
+                  padding: '0 12px',
+                  paddingLeft: isProject ? '12px' : isMilestone ? '24px' : '36px',
+                  fontWeight: isProject ? 600 : 400,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={task.name}
+              >
+                {isProject && (isCollapsed ? '▶ ' : '▼ ')}
+                {isMilestone && '◆ '}
+                {task.name}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     );
-    const duration =
-      Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 1000)) + 1;
-
-    const cellWidth = viewMode === 'day' ? 60 : viewMode === 'week' ? 80 : 120;
-    const left = Math.max(0, startDiff * cellWidth);
-    const width = Math.max(cellWidth / 2, duration * cellWidth);
-
-    return { left, width };
   };
 
-  const handleTaskDragStart = (taskId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    setDraggedTask(taskId);
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      // Calculate new position and update task dates
-      const cellWidth = viewMode === 'day' ? 60 : viewMode === 'week' ? 80 : 120;
-      const deltaX = moveEvent.clientX - e.clientX;
-      const daysDelta = Math.round(deltaX / cellWidth);
-
-      if (daysDelta !== 0 && onTaskUpdate) {
-        const task = flatTasks.find((t) => t.task_id === taskId);
-        if (task) {
-          const newStartDate = new Date(task.start_date);
-          const newEndDate = new Date(task.end_date);
-          newStartDate.setDate(newStartDate.getDate() + daysDelta);
-          newEndDate.setDate(newEndDate.getDate() + daysDelta);
-
-          onTaskUpdate(taskId, {
-            start_date: newStartDate.toISOString().split('T')[0],
-            end_date: newEndDate.toISOString().split('T')[0],
-          });
-        }
-      }
-    };
-
-    const handleMouseUp = () => {
-      setDraggedTask(null);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleProgressClick = (taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onTaskUpdate) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const newProgress = Math.round((clickX / rect.width) * 100);
-
-      let newStatus: Task['status'] = '할일';
-      if (newProgress >= 100) newStatus = '완료';
-      else if (newProgress > 0) newStatus = '진행중';
-
-      onTaskUpdate(taskId, { progress: newProgress, status: newStatus });
-    }
-  };
-
-  const generateTimelineHeaders = () => {
-    const headers = [];
-    const startDate = new Date(currentDate);
-    const daysToShow = viewMode === 'day' ? 30 : viewMode === 'week' ? 12 : 6;
-
-    for (let i = 0; i < daysToShow; i++) {
-      const date = new Date(startDate);
-      if (viewMode === 'day') {
-        date.setDate(startDate.getDate() + i);
-        headers.push(date.getDate().toString());
-      } else if (viewMode === 'week') {
-        date.setDate(startDate.getDate() + i * 7);
-        headers.push(`${date.getMonth() + 1}/${date.getDate()}`);
+  // 접기/펼치기 토글 핸들러
+  const handleExpanderClick = (task: GanttTask) => {
+    setCollapsedTasks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(task.id)) {
+        newSet.delete(task.id);
       } else {
-        date.setMonth(startDate.getMonth() + i);
-        headers.push(`${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`);
+        newSet.add(task.id);
       }
-    }
-    return headers;
+      return newSet;
+    });
+  };
+
+  // 간트차트에서 날짜 변경 시 (드래그) - 로컬 상태만 업데이트
+  const handleTaskChange = (task: GanttTask) => {
+    console.log('날짜 변경됨 (미저장):', task);
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, start: task.start, end: task.end } : t))
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  // 진행률 변경 시 - 로컬 상태만 업데이트
+  const handleProgressChange = (task: GanttTask) => {
+    console.log('진행률 변경됨 (미저장):', task);
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, progress: task.progress } : t))
+    );
+    setHasUnsavedChanges(true);
+  };
+
+  // 날짜 더블클릭 시 (확장 기능 - 옵션)
+  const handleDoubleClick = (task: GanttTask) => {
+    console.log('Task double clicked:', task);
+  };
+
+  // 작업 선택 시
+  const handleSelect = (task: GanttTask, isSelected: boolean) => {
+    console.log('Task selected:', task, isSelected);
   };
 
   return (
@@ -154,160 +256,62 @@ export function GanttChartView({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">간트차트</h3>
         <div className="flex items-center space-x-2">
-          <Select value={viewMode} onValueChange={(value: any) => setViewMode(value)}>
+          <Select value={viewModeString} onValueChange={setViewModeString}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="day">일별</SelectItem>
-              <SelectItem value="week">주별</SelectItem>
-              <SelectItem value="month">월별</SelectItem>
+              <SelectItem value="Hour">시간별</SelectItem>
+              <SelectItem value="QuarterDay">6시간별</SelectItem>
+              <SelectItem value="HalfDay">반일별</SelectItem>
+              <SelectItem value="Day">일별</SelectItem>
+              <SelectItem value="Week">주별</SelectItem>
+              <SelectItem value="Month">월별</SelectItem>
+              <SelectItem value="Year">년별</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigateDate('next')}>
-            <ChevronRight className="h-4 w-4" />
+          <Button onClick={handleSaveGantt} variant={hasUnsavedChanges ? 'default' : 'outline'}>
+            <Save className="h-4 w-4 mr-2" />
+            저장{hasUnsavedChanges ? ' *' : ''}
           </Button>
         </div>
       </div>
 
       {/* 간트차트 */}
-      <div className="border rounded-lg bg-card p-6">
-        <div className="grid grid-cols-[300px_1fr] gap-0 border rounded">
-          {/* 작업명 열 */}
-          <div className="border-r">
-            <div className="p-3 bg-muted font-medium border-b">작업명</div>
-            {flatTasks.map((task) => (
-              <div
-                key={task.task_id}
-                className={`p-3 border-b cursor-pointer hover:bg-muted/50 transition-colors ${
-                  selectedTaskId === task.task_id ? 'bg-primary/10 border-primary/20' : ''
-                }`}
-                onClick={() => onTaskSelect?.(task.task_id)}
-                style={{ paddingLeft: `${12 + task.depth * 20}px` }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <span className="truncate font-medium">{task.name}</span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      ({task.assignee})
-                    </span>
-                  </div>
-                  {selectedTaskId === task.task_id && (
-                    <Edit className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </div>
-                <div
-                  className="mt-2 w-full bg-gray-200 rounded-full h-2 cursor-pointer hover:bg-gray-300 transition-colors"
-                  onClick={(e) => handleProgressClick(task.task_id, e)}
-                  title={`진행률: ${task.progress}% (클릭하여 수정)`}
-                >
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${task.progress}%` }}
-                  />
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {task.progress}% •{' '}
-                  {task.status === '할일' ? '할 일' : task.status === '진행중' ? '진행 중' : '완료'}
-                </div>
-              </div>
-            ))}
+      <div className="border rounded-lg bg-card p-6 overflow-x-auto">
+        {ganttTaskList.length > 0 ? (
+          <Gantt
+            tasks={ganttTaskList}
+            viewMode={viewMode}
+            onDateChange={handleTaskChange}
+            onProgressChange={handleProgressChange}
+            onDoubleClick={handleDoubleClick}
+            onSelect={handleSelect}
+            listCellWidth="200px"
+            columnWidth={viewMode === ViewMode.Month ? 300 : 65}
+            locale="ko"
+            todayColor="rgba(252, 248, 227, 0.5)"
+            barProgressColor="#3b82f6"
+            barBackgroundColor="#60a5fa"
+            barBackgroundSelectedColor="#2563eb"
+            arrowColor="#94a3b8"
+            arrowIndent={20}
+            TaskListHeader={TaskListHeader}
+            TaskListTable={(props) => (
+              <TaskListTable {...props} onExpanderClick={handleExpanderClick} />
+            )}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-64 text-muted-foreground">
+            작업이 없습니다. WBS 테이블에서 작업을 추가해주세요.
           </div>
-
-          {/* 타임라인 영역 */}
-          <div className="min-w-0 overflow-x-auto">
-            {/* 타임라인 헤더 */}
-            <div className="flex border-b bg-muted min-w-max">
-              {generateTimelineHeaders().map((header, index) => (
-                <div
-                  key={index}
-                  className="flex-shrink-0 p-3 text-center border-r font-medium"
-                  style={{ width: viewMode === 'day' ? 60 : viewMode === 'week' ? 80 : 120 }}
-                >
-                  {header}
-                </div>
-              ))}
-            </div>
-
-            {/* 간트 막대 영역 */}
-            <div className="relative min-w-max">
-              {flatTasks.map((task, taskIndex) => {
-                const { left, width } = calculateBarPosition(task);
-                const isSelected = selectedTaskId === task.task_id;
-                const isDragging = draggedTask === task.task_id;
-
-                return (
-                  <div key={task.task_id} className="relative border-b" style={{ height: 73 }}>
-                    {/* 그리드 라인 */}
-                    <div className="absolute inset-0 flex">
-                      {generateTimelineHeaders().map((_, index) => (
-                        <div
-                          key={index}
-                          className="border-r"
-                          style={{
-                            width: viewMode === 'day' ? 60 : viewMode === 'week' ? 80 : 120,
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    {/* 간트 막대 */}
-                    {left >= 0 && (
-                      <div
-                        className={`absolute top-3 h-8 rounded shadow-sm transition-all duration-200 cursor-move select-none ${getTaskColor(
-                          task
-                        )} ${isSelected ? 'ring-2 ring-primary ring-offset-1' : ''} ${
-                          isDragging ? 'opacity-75 scale-105' : 'hover:opacity-90'
-                        }`}
-                        style={{ left, width: Math.max(width, 20) }}
-                        onClick={() => onTaskSelect?.(task.task_id)}
-                        onMouseDown={(e) => handleTaskDragStart(task.task_id, e)}
-                        title={`${task.name} (드래그하여 일정 조정)`}
-                      >
-                        <div className="px-2 py-1 text-xs text-white truncate flex items-center justify-between">
-                          <span>{task.name}</span>
-                          <span className="text-xs opacity-75">{task.progress}%</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="absolute bottom-1 left-2 text-xs text-muted-foreground">
-                      <div>
-                        {task.start_date} ~ {task.end_date}
-                      </div>
-                      <div className="text-xs opacity-75">
-                        {task.duration_days}일 • {task.assignee}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* 범례 및 도움말 */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-gray-400 rounded" />
-            <span>할 일</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-blue-500 rounded" />
-            <span>진행 중</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 bg-green-500 rounded" />
-            <span>완료</span>
-          </div>
-        </div>
         <div className="text-xs">
-          💡 막대를 드래그하여 일정 조정, 진행률 바를 클릭하여 진행률 수정
+          💡 막대를 드래그하여 일정 조정, 진행률 바를 드래그하여 진행률 수정
         </div>
       </div>
     </div>

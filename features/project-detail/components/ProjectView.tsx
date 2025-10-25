@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { BarChart3, Kanban, Table } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { HierarchicalWBSTable } from '@/features/wbs/components/HierarchicalWbsTable';
 import { GanttChartView } from '@/features/gantt/components/GanttChartView';
 import { KanbanBoard } from '@/features/kanban/components/KanbanBoard';
-import { TaskDetailPanel } from '@/features/project-detail/components/TaskDetailPanel';
 import { ProjectHeader } from '@/features/project-detail/components/ProjectHeader';
+import { TaskDetailPanel } from '@/features/project-detail/components/TaskDetailPanel';
 import { ViewSelector } from '@/features/project-detail/components/ViewSelector';
 import { ProjectViewSkeleton } from '@/features/project-detail/skeletons/ProjectViewSkeleton';
-import { useProjectData } from '@/shared/hooks/useProjectData';
+import { HierarchicalWBSTable } from '@/features/wbs/components/HierarchicalWbsTable';
 import { useTaskOperations } from '@/features/wbs/hooks/useTaskOperations';
-import { saveWBSTasksWithSync } from '@/shared/lib/storage';
+import { useProjectData } from '@/shared/hooks/useProjectData';
 import type { Task } from '@/shared/lib/apiTypes';
+import { saveWBSTasksWithSync } from '@/shared/lib/storage';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
+import { BarChart3, Kanban, Table } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface ProjectViewProps {
   project: any;

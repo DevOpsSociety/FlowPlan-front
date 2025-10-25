@@ -104,7 +104,7 @@ export interface ActivityLog {
 }
 
 // Task 상태 타입
-export type TaskStatus = '할일' | '진행중' | '완료' | '보류';
+export type TaskStatus = '할일' | '진행중' | '완료';
 
 // 백엔드 API Task 타입 (WBS 구조)
 export interface Task {
