@@ -186,12 +186,14 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
 
   // 완료된 하위 작업 개수로 부모 진행률 계산
   const calculateParentProgress = (subtasks: Task[]): number => {
+    if (subtasks.length === 0) return 0;
+
     const completedCount = subtasks.filter((s) => s.status === '완료').length;
     return Math.round((completedCount / subtasks.length) * 100);
   };
 
-  // 부모 작업의 하위 작업 업데이트
-  const updateTaskWithSubtasks = (task: Task, parentTaskId: string, subtaskId: string): Task => {
+  // 최상위 작업에서 하위 작업 찾아서 업데이트 (depth=1 제한)
+  const updateParentTask = (task: Task, parentTaskId: string, subtaskId: string): Task => {
     if (task.task_id !== parentTaskId || !task.subtasks) return task;
 
     const updatedSubtasks = task.subtasks.map((subtask) => toggleSubtaskStatus(subtask, subtaskId));
@@ -200,11 +202,11 @@ export function KanbanBoard({ projectId: _projectId }: KanbanBoardProps) {
     return { ...task, subtasks: updatedSubtasks, progress: parentProgress };
   };
 
-  // 하위 작업 완료 상태 토글 (메인 함수)
+  // 하위 작업 완료 상태 토글
+  // 주의: 최상위 작업(depth 0)에서만 parentTaskId를 검색합니다.
+  // 프로젝트는 최대 depth = 1로 제한되어 있습니다. (CLAUDE.md 참조)
   const toggleSubtaskCompletion = (parentTaskId: string, subtaskId: string) => {
-    setLocalTasks((prev) =>
-      prev.map((task) => updateTaskWithSubtasks(task, parentTaskId, subtaskId))
-    );
+    setLocalTasks((prev) => prev.map((task) => updateParentTask(task, parentTaskId, subtaskId)));
     setHasUnsavedChanges(true);
   };
 
