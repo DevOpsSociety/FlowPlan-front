@@ -30,15 +30,12 @@ export const fromGanttTask = (ganttTask: GanttTask): Partial<Task> => {
 /**
  * 우리의 Task 타입을 gantt-task-react의 Task 형식으로 변환
  * 간트차트 렌더링 시 사용
+ * @param task - 변환할 Task 객체
+ * @param parentId - 부모 작업 ID (계층 구조 평탄화 시 사용)
  */
-export const toGanttTask = (task: Task): GanttTask => {
-  // TaskStatus를 gantt-task-react의 타입으로 매핑
-  const typeMapping: Record<TaskStatus, 'task' | 'milestone' | 'project'> = {
-    할일: 'task',
-    진행중: 'task',
-    완료: 'task',
-    보류: 'task',
-  };
+export const toGanttTask = (task: Task, parentId?: string): GanttTask => {
+  // subtasks가 있으면 'project', 없으면 'task'
+  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
 
   return {
     id: task.task_id,
@@ -46,9 +43,9 @@ export const toGanttTask = (task: Task): GanttTask => {
     start: new Date(task.start_date),
     end: new Date(task.end_date),
     progress: task.progress,
-    type: typeMapping[task.status] || 'task',
+    type: hasSubtasks ? 'project' : 'task',
     dependencies: [], // 필요시 추가 구현
-    project: task.parent_id || undefined,
+    project: parentId,
     hideChildren: false,
   };
 };

@@ -4,6 +4,7 @@ import { useToast } from '@/shared/hooks/useToast';
 import type { Task } from '@/shared/lib/apiTypes';
 import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
 import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
+import { toGanttTask } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import type { Task as GanttTask } from 'gantt-task-react';
@@ -12,28 +13,13 @@ import 'gantt-task-react/dist/index.css';
 import { Save } from 'lucide-react';
 import { useState } from 'react';
 
-// Task를 GanttTask로 변환하는 함수
-const convertToGanttTask = (task: Task, parentId?: string): GanttTask => {
-  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-  return {
-    id: task.task_id,
-    name: task.name,
-    start: new Date(task.start_date),
-    end: new Date(task.end_date),
-    progress: task.progress,
-    type: hasSubtasks ? 'project' : 'task',
-    project: parentId,
-    hideChildren: false,
-  };
-};
-
 // 계층 구조 Task를 평탄화하여 GanttTask 배열로 변환
 const flattenTasks = (tasks: Task[]): GanttTask[] => {
   const result: GanttTask[] = [];
 
   const traverse = (taskList: Task[], parentId?: string) => {
     for (const task of taskList) {
-      result.push(convertToGanttTask(task, parentId));
+      result.push(toGanttTask(task, parentId));
       if (task.subtasks && task.subtasks.length > 0) {
         traverse(task.subtasks, task.task_id);
       }
