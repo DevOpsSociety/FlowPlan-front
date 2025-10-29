@@ -261,7 +261,6 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                     <TableHead>팀원</TableHead>
                     <TableHead>이메일</TableHead>
                     <TableHead>역할</TableHead>
-                    <TableHead>상태</TableHead>
                     <TableHead className="text-right">작업</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -287,11 +286,6 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                         <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
                           {getRoleIcon(member.role)}
                           {getRoleLabel(member.role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
-                          {member.status === 'active' ? '활성' : '대기중'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
