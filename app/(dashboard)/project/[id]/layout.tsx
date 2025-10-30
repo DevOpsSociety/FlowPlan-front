@@ -1,7 +1,6 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import getQueryClient from '@/shared/lib/queries/getQueryClient';
 import { getProjectById, getProjectTasks } from '@/shared/lib/queries/projectService';
-import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
 import { ProjectLayoutClient } from '@/features/project-detail/components/ProjectLayoutClient';
 
 /**
@@ -24,13 +23,14 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   const queryClient = getQueryClient(); // cache()로 싱글톤 생성
 
   // 서버에서 프로젝트 데이터와 태스크를 미리 로드
+  // Note: 서버 컴포넌트에서는 queryKey를 직접 정의 (QUERY_KEYS는 클라이언트 전용)
   await Promise.all([
     queryClient.prefetchQuery({
-      queryKey: QUERY_KEYS.project(params.id),
+      queryKey: ['project', params.id],
       queryFn: () => getProjectById(params.id),
     }),
     queryClient.prefetchQuery({
-      queryKey: QUERY_KEYS.tasks(params.id),
+      queryKey: ['tasks', params.id],
       queryFn: () => getProjectTasks(params.id),
     }),
   ]);
