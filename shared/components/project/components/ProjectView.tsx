@@ -2,10 +2,10 @@
 
 import { GanttChartView } from '@/features/gantt/components/GanttChartView';
 import { KanbanBoard } from '@/features/kanban/components/KanbanBoard';
-import { ProjectHeader } from '@/features/project-detail/components/ProjectHeader';
-import { TaskDetailPanel } from '@/features/project-detail/components/TaskDetailPanel';
-import { ViewSelector } from '@/features/project-detail/components/ViewSelector';
-import { ProjectViewSkeleton } from '@/features/project-detail/skeletons/ProjectViewSkeleton';
+import { ProjectHeader } from '@/shared/components/project/components/ProjectHeader';
+import { TaskDetailPanel } from '@/shared/components/project/components/TaskDetailPanel';
+import { ViewSelector } from '@/shared/components/project/components/ViewSelector';
+import { ProjectViewSkeleton } from '@/shared/components/project/skeletons/ProjectViewSkeleton';
 import { HierarchicalWBSTable } from '@/features/wbs/components/HierarchicalWbsTable';
 import { useTaskOperations } from '@/features/wbs/hooks/useTaskOperations';
 import { useProjectData } from '@/shared/hooks/useProjectData';
