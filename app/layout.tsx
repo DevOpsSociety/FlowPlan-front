@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import type React from 'react';
-import { ClientLayout } from './ClientLayout';
+import { ThemeProvider } from 'next-themes';
+import { Analytics } from '@vercel/analytics/next';
+import { Toaster } from '@/shared/ui/sonner';
+import { ReactQueryProvider } from '@/shared/providers/ReactQueryProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'FlowPlan - AI 프로젝트 관리',
   description: 'AI 기반 프로젝트 관리 도구',
-  generator: 'v0.app',
 };
 
 export default function RootLayout({
@@ -17,7 +19,18 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body>
-        <ClientLayout>{children}</ClientLayout>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ReactQueryProvider>
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
+        </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
