@@ -6,18 +6,23 @@ import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
 import { ProjectHeader } from './ProjectHeader';
 import { ViewNavigator } from './ViewNavigator';
 
-interface ProjectLayoutClientProps {
+interface ProjectClientProps {
   projectId: string;
   children: React.ReactNode;
 }
 
 /**
- * 프로젝트 레이아웃 클라이언트 컴포넌트
+ * 프로젝트 클라이언트 컴포넌트
  *
  * HydrationBoundary로 주입된 데이터를 사용하여
  * 공통 헤더와 뷰 네비게이션을 렌더링합니다.
+ *
+ * 역할:
+ * - 서버에서 prefetch된 프로젝트 데이터 소비
+ * - 공통 헤더 및 네비게이션 제공
+ * - 사용자 인터랙션 처리 (라우팅 등)
  */
-export function ProjectLayoutClient({ projectId, children }: ProjectLayoutClientProps) {
+export function ProjectClient({ projectId, children }: ProjectClientProps) {
   const router = useRouter();
 
   // HydrationBoundary로 주입된 데이터 사용 (즉시 사용 가능, queryFn 불필요)
