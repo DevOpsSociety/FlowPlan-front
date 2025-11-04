@@ -1,7 +1,7 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import getQueryClient from '@/shared/lib/queries/getQueryClient';
 import { getProjectById, getProjectTasks } from '@/shared/lib/queries/projectService';
-import { ProjectLayoutClient } from '@/shared/components/project/components/ProjectLayoutClient';
+import { ProjectClient } from '@/shared/components/project/components/ProjectClient';
 
 /**
  * 프로젝트 상세 페이지 레이아웃
@@ -38,7 +38,7 @@ export default async function ProjectLayout({ children, params }: ProjectLayoutP
   // dehydrate: QueryClient 상태를 직렬화하여 클라이언트로 전달
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <ProjectLayoutClient projectId={params.id}>{children}</ProjectLayoutClient>
+      <ProjectClient projectId={params.id}>{children}</ProjectClient>
     </HydrationBoundary>
   );
 }
