@@ -1,8 +1,10 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
+import { useProjectQuery, QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
+import { useQuery } from '@tanstack/react-query';
+import { getProjectTasks } from '@/shared/lib/queries/projectService';
+import type { Task } from '@/shared/lib/apiTypes';
 import { ProjectHeader } from './ProjectHeader';
 import { ViewNavigator } from './ViewNavigator';
 
@@ -18,20 +20,21 @@ interface ProjectClientProps {
  * 공통 헤더와 뷰 네비게이션을 렌더링합니다.
  *
  * 역할:
- * - 서버에서 prefetch된 프로젝트 데이터 소비
+ * - 서버에서 prefetch된 프로젝트 데이터 소비 (초기 렌더링)
+ * - queryFn으로 재검증 지원 (window focus, staleTime 만료 시)
  * - 공통 헤더 및 네비게이션 제공
  * - 사용자 인터랙션 처리 (라우팅 등)
  */
 export function ProjectClient({ projectId, children }: ProjectClientProps) {
   const router = useRouter();
 
-  // HydrationBoundary로 주입된 데이터 사용 (즉시 사용 가능, queryFn 불필요)
-  const { data: project, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.project(projectId),
-  });
+  // ✅ useProjectQuery 훅 사용 (queryFn 포함)
+  const { data: project, isLoading } = useProjectQuery(projectId);
 
-  const { data: tasks = [] } = useQuery({
+  // ✅ tasks도 queryFn 제공 (재검증 시 필요)
+  const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: QUERY_KEYS.tasks(projectId),
+    queryFn: async () => getProjectTasks(projectId),
   });
 
   if (isLoading || !project) {

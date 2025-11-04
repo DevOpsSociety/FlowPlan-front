@@ -1,7 +1,7 @@
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import getQueryClient from '@/shared/lib/queries/getQueryClient';
 import { getProjectById, getProjectTasks } from '@/shared/lib/queries/projectService';
-import { ProjectClient } from '@/shared/components/project/components/ProjectClient';
+import { ProjectClient } from '@/shared/components/project/ProjectClient';
 
 /**
  * 프로젝트 상세 페이지 레이아웃

@@ -6,7 +6,7 @@ import { useState, useCallback } from 'react';
 import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
 import { HierarchicalWBSTable } from './HierarchicalWbsTable';
 import { useTaskOperations } from '../hooks/useTaskOperations';
-import { TaskDetailPanel } from '@/shared/components/project/components/TaskDetailPanel';
+import { TaskDetailPanel } from '@/shared/components/project/TaskDetailPanel';
 import type { Task } from '@/shared/lib/apiTypes';
 
 /**
