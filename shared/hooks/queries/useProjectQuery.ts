@@ -42,7 +42,6 @@ export function useProjectQuery(projectId: string) {
           description: storedProject.description,
           teamSize: storedProject.teamSize,
           duration: storedProject.duration,
-          task_id: storedProject.task_id,
         };
       }
 
@@ -55,7 +54,6 @@ export function useProjectQuery(projectId: string) {
           description: mockProject.description,
           teamSize: mockProject.teamMembers.length,
           duration: 90,
-          task_id: projectId,
         };
       }
 
