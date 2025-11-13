@@ -27,8 +27,18 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
       const storedUser = localStorage.getItem('user');
 
       if (authToken && storedUser) {
-        setIsAuthenticated(true);
-        // setUser(JSON.parse(storedUser));
+        try {
+          const loggedInUser: UserProfile = JSON.parse(storedUser);
+
+          setUser(loggedInUser);
+          setIsAuthenticated(true);
+
+          // setIsAuthenticated(true);
+          // setUser(JSON.parse(storedUser));
+        } catch (error) {
+          console.log('localStorage user 파싱 오류:', error);
+          handleLogout(); // 강제 로그아웃
+        }
       } else {
         setIsAuthenticated(false);
         setUser(null);
