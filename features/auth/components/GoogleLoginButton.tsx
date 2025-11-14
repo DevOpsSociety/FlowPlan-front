@@ -28,7 +28,7 @@ export function GoogleLoginButton({
     const idToken = credentialResponse.credential;
 
     if (!idToken) {
-      console.error('Google 로그인 실패: id_token을 받지 못했습니다.');
+      console.error('id_token을 받지 못했습니다.');
       setIsLoggingIn(false);
       onLoginError();
       return;
@@ -46,18 +46,36 @@ export function GoogleLoginButton({
         throw new Error(`API 서버 오류: ${response.status}`);
       }
 
-      const { token, user } = await response.json();
-      onLoginSuccess(user, token); // 성공! 부모에게 알림
-      console.log('로그인 성공, 사용자 정보:', user);
+      const authorizationHeader = response.headers.get('authorization');
+      let token = null;
+
+      if (authorizationHeader && authorizationHeader.startsWith('Bearer ')) {
+        // 'Bearer ' 라는 접두사를 제거한 순수 토큰 값만 저장합니다.
+        token = authorizationHeader.split(' ')[1];
+      }
+
+      const refreshToken = response.headers.get('refresh-token');
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken); // <b><-- 중요!</b>
+      }
+
+      const user = await response.json();
+
+      if (user && token) {
+        onLoginSuccess(user, token); // 성공!
+        console.log('Google 로그인 성공:', user);
+      } else {
+        // 둘 중 하나라도 없으면 에러 처리
+        throw new Error('서버 응답에서 user(body) 또는 token(header)을 받지 못했습니다.');
+      }
     } catch (error) {
       console.error('로그인 API 연동 실패:', error);
-      onLoginError(); // 실패! 부모에게 알림
+      onLoginError();
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  // 구글 로그인 자체 실패 시 (기존과 동일)
   const handleError = () => {
     console.error('Google 로그인 실패');
     setIsLoggingIn(false);

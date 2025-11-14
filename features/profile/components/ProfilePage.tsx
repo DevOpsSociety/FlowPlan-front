@@ -15,10 +15,15 @@ interface ProfilePageProps {
   onBack: () => void;
 }
 
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  isNewUser: boolean;
+}
+
 export function ProfilePage({ onBack }: ProfilePageProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
+  const defaultProfileData = {
     name: '김철수',
     email: 'kim.chulsoo@company.com',
     phone: '010-1234-5678',
@@ -28,17 +33,34 @@ export function ProfilePage({ onBack }: ProfilePageProps) {
     department: '개발팀',
     position: '시니어 프로젝트 매니저',
     skills: ['프로젝트 관리', '팀 리더십', '일정 관리', '리스크 관리', 'Agile/Scrum'],
-  });
+  };
 
-  const [editData, setEditData] = useState(profileData);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [profileData, setProfileData] = useState(defaultProfileData);
+  const [editData, setEditData] = useState(defaultProfileData);
 
   useEffect(() => {
-    // Simulate loading profile data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
+    const storedUser = localStorage.getItem('user');
 
-    return () => clearTimeout(timer);
+    if (storedUser) {
+      try {
+        const loggedInUser: UserProfile = JSON.parse(storedUser);
+
+        const mergedProfileData = {
+          ...defaultProfileData,
+          name: loggedInUser.name,
+          email: loggedInUser.email,
+        };
+
+        setProfileData(mergedProfileData);
+        setEditData(mergedProfileData);
+      } catch (error) {
+        console.error('localStorage user 파싱 오류:', error);
+      }
+    }
+
+    setIsLoading(false);
   }, []);
 
   const handleEdit = () => {
