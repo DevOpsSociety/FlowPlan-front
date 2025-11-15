@@ -9,6 +9,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/project/:id',
+        destination: '/project/:id/wbs-table',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

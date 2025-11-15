@@ -29,7 +29,8 @@ export function ProjectClient({ projectId, children }: ProjectClientProps) {
   const router = useRouter();
 
   // ✅ useProjectQuery 훅 사용 (queryFn 포함)
-  const { data: project, isLoading } = useProjectQuery(projectId);
+  // layout.tsx에서 이미 prefetch 완료되어 hydration 보장됨
+  const { data: project } = useProjectQuery(projectId);
 
   // ✅ tasks도 queryFn 제공 (재검증 시 필요)
   const { data: tasks = [] } = useQuery<Task[]>({
@@ -37,15 +38,9 @@ export function ProjectClient({ projectId, children }: ProjectClientProps) {
     queryFn: async () => getProjectTasks(projectId),
   });
 
-  if (isLoading || !project) {
-    return (
-      <div className="flex items-center justify-center p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">프로젝트 로딩 중...</p>
-        </div>
-      </div>
-    );
+  // 타입 안전성 체크만 유지 (prefetch 실패 시 방어)
+  if (!project) {
+    return null;
   }
 
   const handleShowTeam = () => {
