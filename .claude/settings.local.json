@@ -48,7 +48,9 @@
       "Bash(bash scripts/update-imports.sh \"@/components/shared/notification-center\" \"@/features/collaboration/components/notification-center\")",
       "Bash(bash scripts/update-imports.sh \"@/components/shared/online-users\" \"@/features/collaboration/components/online-users\")",
       "Bash(bash scripts/update-imports.sh \"@/components/shared/ai-markdown-editor\" \"@/features/collaboration/components/ai-markdown-editor\")",
-      "Bash(git add .)"
+      "Bash(git add .)",
+      "Bash(cat:*)",
+      "Bash(npm view:*)"
     ],
     "deny": [],
     "ask": []
