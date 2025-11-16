@@ -1,54 +1,5 @@
-import type { Task as GanttTask } from 'gantt-task-react';
+import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
-
-/**
- * gantt-task-react의 Task 형식에서 우리의 Task 타입으로 변환
- * 간트차트에서 드래그로 날짜/진행률 변경 시 사용
- */
-export const fromGanttTask = (ganttTask: GanttTask): Partial<Task> => {
-  // 날짜를 YYYY-MM-DD 형식으로 변환
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
-  };
-
-  // 기간 계산 (일 단위)
-  const calculateDuration = (start: Date, end: Date): number => {
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  return {
-    start_date: formatDate(ganttTask.start),
-    end_date: formatDate(ganttTask.end),
-    duration_days: calculateDuration(ganttTask.start, ganttTask.end),
-    progress: ganttTask.progress,
-    name: ganttTask.name,
-  };
-};
-
-/**
- * 우리의 Task 타입을 gantt-task-react의 Task 형식으로 변환
- * 간트차트 렌더링 시 사용
- * @param task - 변환할 Task 객체
- * @param parentId - 부모 작업 ID (계층 구조 평탄화 시 사용)
- */
-export const toGanttTask = (task: Task, parentId?: string): GanttTask => {
-  // subtasks가 있으면 'project', 없으면 'task'
-  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-
-  return {
-    id: task.task_id,
-    name: task.name,
-    start: new Date(task.start_date),
-    end: new Date(task.end_date),
-    progress: task.progress,
-    type: hasSubtasks ? 'project' : 'task',
-    dependencies: [], // 필요시 추가 구현
-    project: parentId,
-    hideChildren: false,
-  };
-};
 
 /**
  * 칸반 상태를 Task의 status로 변환
@@ -126,52 +77,179 @@ export const flattenTasks = (tasks: Task[]): Task[] => {
   return result;
 };
 
+// ===== SVAR Gantt 변환 함수 =====
+
 /**
- * 평탄화된 GanttTask 배열을 계층 구조의 Task 배열로 역변환
- * Gantt 차트 저장 시 사용
- * @param ganttTasks - 평탄화된 GanttTask 배열
- * @param originalTasks - 원본 Task 배열 (구조 참조용)
- * @returns 계층 구조가 복원된 Task 배열
+ * Task 배열을 SVAR Gantt 형식으로 변환
+ *
+ * 용도: 간트차트 렌더링 시 서버 데이터를 화면에 표시
+ *
+ * SVAR 공식 스펙:
+ * - id: 숫자 (필수) - 문자열 task_id를 숫자로 매핑
+ * - text: 문자열 (필수) - 작업명
+ * - start: Date (필수) - 시작일
+ * - duration: 숫자 (필수) - 기간(일)
+ * - parent: 숫자 (선택) - 부모 작업 ID
+ * - progress: 0-100 (선택) - 진행률
+ * - type: "task" | "summary" (선택) - 하위 작업 있으면 "summary"
+ *
+ * @param tasks - 서버의 계층 구조 Task 배열
+ * @returns SVAR Gantt가 렌더링할 수 있는 평탄화된 배열
  */
-export const convertGanttTasksToHierarchical = (
-  ganttTasks: GanttTask[],
-  originalTasks: Task[]
-): Task[] => {
-  // GanttTask를 task_id로 빠르게 찾기 위한 Map 생성
-  const ganttTaskMap = new Map<string, GanttTask>();
-  ganttTasks.forEach((gt) => {
-    ganttTaskMap.set(gt.id, gt);
+export const taskToGantt = (tasks: Task[]): SvarTask[] => {
+  const result: SvarTask[] = [];
+
+  // Task ID를 숫자로 변환 (간단한 카운터 사용)
+  let idCounter = 1;
+  const idMap = new Map<string, number>();
+
+  // 1단계: 모든 task에 숫자 ID 할당
+  const assignIds = (taskList: Task[]) => {
+    for (const task of taskList) {
+      idMap.set(task.task_id, idCounter++);
+      if (task.subtasks && task.subtasks.length > 0) {
+        assignIds(task.subtasks);
+      }
+    }
+  };
+  assignIds(tasks);
+
+  // 2단계: SVAR 형식으로 변환
+  const traverse = (taskList: Task[], parentId?: number) => {
+    for (const task of taskList) {
+      const numId = idMap.get(task.task_id)!;
+      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+
+      const startDate = new Date(task.start_date);
+      const endDate = new Date(task.end_date);
+
+      // SVAR 공식 문서: 필수 속성 (id, text, start, duration)
+      const svarTask: SvarTask = {
+        id: numId,
+        text: task.name,
+        start: startDate,
+        end: endDate,
+        duration: task.duration_days,
+      };
+
+      // 선택 속성: 부모가 있을 때만 parent 추가
+      if (parentId !== undefined) {
+        svarTask.parent = parentId;
+      }
+
+      // 선택 속성: type (subtask가 있으면 summary)
+      if (hasSubtasks) {
+        svarTask.type = 'summary';
+      }
+
+      // 선택 속성: progress
+      if (task.progress > 0) {
+        svarTask.progress = task.progress;
+      }
+
+      // 커스텀 속성: assignee (담당자)
+      if (task.assignee) {
+        (svarTask as any).assignee = task.assignee;
+      }
+
+      result.push(svarTask);
+
+      // 하위 작업 처리
+      if (hasSubtasks) {
+        traverse(task.subtasks, numId);
+      }
+    }
+  };
+
+  traverse(tasks);
+  return result;
+};
+
+/**
+ * SVAR Gantt 형식을 Task 배열로 역변환
+ *
+ * 용도: 사용자가 간트차트에서 수정한 내용을 서버에 저장
+ *
+ * 동작 방식:
+ * 1. 원본 Task 구조를 유지하면서
+ * 2. SVAR에서 변경된 값들만 업데이트
+ * 3. 계층 구조 그대로 반환
+ *
+ * @param svarTasks - SVAR Gantt의 현재 상태 (api.getState().tasks.serialize())
+ * @param originalTasks - 원본 계층 구조 참조용 (ID 매핑 및 구조 유지)
+ * @returns 변경사항이 반영된 계층 구조 Task 배열
+ */
+export const ganttToTask = (svarTasks: SvarTask[], originalTasks: Task[]): Task[] => {
+  // SVAR Task ID → 원본 Task ID 매핑 복원
+  const idMap = new Map<number, string>();
+  let idCounter = 1;
+
+  const buildIdMap = (taskList: Task[]) => {
+    for (const task of taskList) {
+      idMap.set(idCounter++, task.task_id);
+      if (task.subtasks && task.subtasks.length > 0) {
+        buildIdMap(task.subtasks);
+      }
+    }
+  };
+  buildIdMap(originalTasks);
+
+  // SVAR Task를 Map에 저장
+  const svarTaskMap = new Map<number, SvarTask>();
+  svarTasks.forEach((task) => {
+    if (task.id !== undefined) {
+      svarTaskMap.set(Number(task.id), task);
+    }
   });
 
-  // 원본 Task를 순회하며 GanttTask의 변경사항을 적용
-  const updateTask = (task: Task): Task => {
-    const ganttTask = ganttTaskMap.get(task.task_id);
+  // 원본 Task 업데이트
+  const updateTask = (task: Task, counter: { value: number }): Task => {
+    const numId = counter.value++;
+    const svarTask = svarTaskMap.get(numId);
 
-    // GanttTask가 있으면 변경사항 적용
-    const updatedTask: Task = ganttTask
+    const updatedTask: Task = svarTask
       ? {
           ...task,
-          start_date: ganttTask.start.toISOString().split('T')[0],
-          end_date: ganttTask.end.toISOString().split('T')[0],
-          duration_days:
-            Math.ceil(
-              (ganttTask.end.getTime() - ganttTask.start.getTime()) / (1000 * 60 * 60 * 24)
-            ) || 1,
-          progress: ganttTask.progress,
-          name: ganttTask.name,
+          name: svarTask.text || task.name,
+          start_date: svarTask.start ? svarTask.start.toISOString().split('T')[0] : task.start_date,
+          duration_days: svarTask.duration || task.duration_days,
+          progress: svarTask.progress !== undefined ? svarTask.progress : task.progress,
+          assignee: svarTask.details || task.assignee,
         }
       : task;
 
-    // subtasks가 있으면 재귀적으로 업데이트
+    // end_date 재계산
+    if (svarTask?.start && svarTask?.duration) {
+      const endDate = new Date(svarTask.start);
+      endDate.setDate(endDate.getDate() + svarTask.duration);
+      updatedTask.end_date = endDate.toISOString().split('T')[0];
+    }
+
+    // subtasks 재귀 업데이트
     if (task.subtasks && task.subtasks.length > 0) {
       return {
         ...updatedTask,
-        subtasks: task.subtasks.map(updateTask),
+        subtasks: task.subtasks.map((st) => updateTask(st, counter)),
       };
     }
 
     return updatedTask;
   };
 
-  return originalTasks.map(updateTask);
+  const counter = { value: 1 };
+  return originalTasks.map((task) => updateTask(task, counter));
 };
+
+// ===== 하위 호환성을 위한 별칭 (Deprecated) =====
+
+/**
+ * @deprecated taskToGantt 사용 권장
+ * 하위 호환성을 위해 유지
+ */
+export const convertToSvarTasksNew = taskToGantt;
+
+/**
+ * @deprecated ganttToTask 사용 권장
+ * 하위 호환성을 위해 유지
+ */
+export const convertSvarTasksToHierarchicalNew = ganttToTask;
