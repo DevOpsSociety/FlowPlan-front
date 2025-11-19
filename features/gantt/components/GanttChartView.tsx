@@ -3,20 +3,21 @@
 import { useToast } from '@/shared/hooks/useToast';
 import { mockHierarchicalTasks } from '@/shared/lib/mockGanttData';
 import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
-import { taskToGantt, ganttToTask } from '@/shared/lib/taskAdapters';
+import { ganttToTask, taskToGantt } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
 import {
+  ContextMenu,
+  defaultEditorItems,
+  Editor,
   Gantt,
   Toolbar,
   Willow,
-  ContextMenu,
-  Editor,
-  type ITask as SvarTask,
   type IApi,
+  type ITask as SvarTask,
 } from '@svar-ui/react-gantt';
 import '@svar-ui/react-gantt/all.css';
-import { Save, RefreshCw } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { RefreshCw, Save } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 interface GanttChartViewProps {
   projectId: string;
@@ -158,11 +159,18 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
       </div>
 
       {/* SVAR Gantt 차트 */}
-      <div className="border rounded-lg bg-card overflow-hidden" style={{ minHeight: '600px' }}>
+      <div className="border rounded-lg bg-card overflow-hidden">
         <Willow>
           <ContextMenu api={apiRef.current || undefined}>
             {apiInitialized && apiRef.current && <Toolbar api={apiRef.current} />}
-            {apiInitialized && apiRef.current && <Editor api={apiRef.current} />}
+            {apiInitialized && apiRef.current && (
+              <Editor
+                api={apiRef.current}
+                items={defaultEditorItems.filter(
+                  (item: { key: string }) => item.key !== 'details' && item.key !== 'type'
+                )}
+              />
+            )}
             <Gantt
               tasks={localTasks}
               links={[]}
