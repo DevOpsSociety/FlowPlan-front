@@ -13,6 +13,26 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/shared/ui/resizable';
 import ReactMarkdown from 'react-markdown';
 
+interface CreateProjectRequest {
+  projectName: string;
+  projectType: string;
+  teamSize: number;
+  expectedDurationDays: number;
+  startDate: string;
+  endDate: string;
+  budget: number;
+  priority: string;
+  stakeholders: string[];
+  deliverables: string[];
+  risks: string[];
+  detailedRequirements: string;
+}
+
+interface CreateProjectResponse {
+  projectId: number;
+  markdownContent: string;
+}
+
 interface ProjectFormProps {
   onSubmit: (data: any) => void;
   isLoading: boolean;
@@ -68,6 +88,9 @@ const EXAMPLE_MARKDOWN = `# AI 기반 WBS 생성기 개발 프로젝트
 
 export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
   const [step, setStep] = useState<'input' | 'review'>('input');
+
+  const [createdProjectId, setCreatedProjectId] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     projectName: '',
     subject: '',
@@ -92,18 +115,80 @@ export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
 
   const handleGenerateMarkdown = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsGeneratingMarkdown(true);
-    // AI 생성 시뮬레이션 (실제로는 API 호출)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setMarkdown(EXAMPLE_MARKDOWN);
-    setIsGeneratingMarkdown(false);
-    setStep('review');
+
+    try {
+      // 프론트엔드 State 데이터를 API 스펙에 맞게 변환
+      const requestBody: CreateProjectRequest = {
+        projectName: formData.projectName,
+        projectType: formData.subject, // 주제를 projectType으로 매핑
+        teamSize: Number(formData.teamSize) || 0, // 숫자로 변환
+        expectedDurationDays: (Number(formData.duration) || 0) * 30, // 개월 수를 일수로 변환 (대략적)
+        startDate: formData.startDate || new Date().toISOString(), // 값이 없으면 현재 날짜
+        endDate: formData.endDate || new Date().toISOString(),
+        budget: Number(formData.budget) || 0, // 숫자로 변환
+        priority: formData.priority || '보통',
+        // 쉼표(,)로 구분된 문자열을 배열로 변환하고 앞뒤 공백 제거
+        stakeholders: formData.stakeholders
+          ? formData.stakeholders
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+        deliverables: formData.deliverables
+          ? formData.deliverables
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+        risks: formData.risks
+          ? formData.risks
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+        detailedRequirements: formData.requirements,
+      };
+
+      const token = localStorage.getItem('authToken');
+
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+      const response = await fetch(`${BASE_URL}/api/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const data: CreateProjectResponse = await response.json();
+
+      // 응답 데이터 처리
+      if (data.markdownContent) {
+        setMarkdown(data.markdownContent);
+        setCreatedProjectId(data.projectId); // 생성된 프로젝트 ID 저장
+        setStep('review'); // 리뷰 단계로 이동
+      } else {
+        alert('AI가 내용을 생성하지 못했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('Error generating WBS:', error);
+
+      alert('프로젝트 생성 중 오류가 발생했습니다. (백엔드 연결 확인 필요)');
+    } finally {
+      setIsGeneratingMarkdown(false);
+    }
   };
 
   const handleFinalSubmit = () => {
     const projectData = {
       ...formData,
+      id: createdProjectId,
       markdown: markdown,
       generatedAt: new Date().toISOString(),
     };
