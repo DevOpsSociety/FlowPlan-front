@@ -50,7 +50,6 @@ export function GoogleLoginButton({
       let token = null;
 
       if (authorizationHeader && authorizationHeader.startsWith('Bearer ')) {
-        // 'Bearer ' 라는 접두사를 제거한 순수 토큰 값만 저장합니다.
         token = authorizationHeader.split(' ')[1];
       }
 
@@ -64,6 +63,7 @@ export function GoogleLoginButton({
       if (user && token) {
         onLoginSuccess(user, token); // 성공!
         console.log('Google 로그인 성공:', user);
+        console.log('idToken:', idToken);
       } else {
         // 둘 중 하나라도 없으면 에러 처리
         throw new Error('서버 응답에서 user(body) 또는 token(header)을 받지 못했습니다.');
