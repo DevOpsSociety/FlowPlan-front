@@ -16,8 +16,13 @@ const nextConfig = {
         destination: '/project/:id/wbs-table',
         permanent: true,
       },
-    ]
+      {
+        source: '/',
+        destination: '/new-project',
+        permanent: true,
+      },
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
