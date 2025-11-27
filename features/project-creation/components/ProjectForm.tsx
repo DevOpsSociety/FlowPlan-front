@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { Loader2, Plus, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { Loader2, Plus, ChevronDown, ChevronUp, ArrowLeft, Eye, Edit3 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -88,6 +88,7 @@ const EXAMPLE_MARKDOWN = `# AI 기반 WBS 생성기 개발 프로젝트
 
 export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
   const [step, setStep] = useState<'input' | 'review'>('input');
+  const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
 
   const [createdProjectId, setCreatedProjectId] = useState<number | null>(null);
 
@@ -242,54 +243,70 @@ export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
 
   if (step === 'review') {
     return (
-      <div className="space-y-4 pb-8">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold">AI가 생성한 초안을 검토하고 수정하세요</h2>
+      <div className="space-y-4 pb-8 max-w-4xl mx-auto">
+        {' '}
+        {/* 폭을 좀 넓혔습니다 */}
+        <div className="text-center space-y-2 mb-6">
+          <h2 className="text-2xl font-bold">AI가 생성한 초안을 검토하세요</h2>
           <p className="text-sm text-muted-foreground">
-            왼쪽에서 미리보기를 확인하고, 오른쪽에서 직접 수정할 수 있습니다.
+            내용을 확인하고 필요한 부분을 직접 수정할 수 있습니다.
           </p>
         </div>
-
-        <ResizablePanelGroup direction="horizontal" className="min-h-[600px] rounded-lg border">
-          {/* 왼쪽 패널: 미리보기 */}
-          <ResizablePanel defaultSize={50} minSize={30}>
-            <div className="h-full flex flex-col">
-              <div className="border-b px-4 py-3 bg-muted/50">
-                <Label className="text-sm font-semibold">미리보기</Label>
-              </div>
-              <div className="flex-1 overflow-auto p-6">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
+        {/* 탭 버튼 영역 */}
+        <div className="flex items-center space-x-1 border-b pb-2 mb-4">
+          <Button
+            variant={activeTab === 'preview' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('preview')}
+            className="gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            미리보기
+          </Button>
+          <Button
+            variant={activeTab === 'edit' ? 'default' : 'ghost'}
+            onClick={() => setActiveTab('edit')}
+            className="gap-2"
+          >
+            <Edit3 className="w-4 h-4" />
+            수정하기
+          </Button>
+        </div>
+        {/* 탭 컨텐츠 영역 (높이 고정) */}
+        <div className="min-h-[500px] max-h-[700px] rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+          {/* 1. 미리보기 탭 */}
+          {activeTab === 'preview' && (
+            <div className="h-[600px] overflow-y-auto p-8 bg-white/50 dark:bg-black/20">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                {/* 마크다운이 비어있을 때 안내 문구 추가 
+                  (수정하다가 다 지워버렸을 경우 대비)
+                */}
+                {markdown ? (
                   <ReactMarkdown>{markdown}</ReactMarkdown>
-                </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-20">내용이 없습니다.</p>
+                )}
               </div>
             </div>
-          </ResizablePanel>
+          )}
 
-          <ResizableHandle withHandle />
-
-          {/* 오른쪽 패널: 편집기 */}
-          <ResizablePanel defaultSize={50} minSize={30}>
-            <div className="h-full flex flex-col">
-              <div className="border-b px-4 py-3 bg-muted/50">
-                <Label className="text-sm font-semibold">직접 수정하기</Label>
-              </div>
-              <div className="flex-1 overflow-auto p-4">
-                <Textarea
-                  value={markdown}
-                  onChange={(e) => setMarkdown(e.target.value)}
-                  className="h-full min-h-full resize-none font-mono text-sm border-0 focus-visible:ring-0"
-                  placeholder="마크다운을 입력하세요..."
-                />
-              </div>
+          {/* 2. 수정하기 탭 */}
+          {activeTab === 'edit' && (
+            <div className="h-[600px] p-0">
+              <Textarea
+                value={markdown}
+                onChange={(e) => setMarkdown(e.target.value)}
+                className="w-full h-full resize-none font-mono text-sm border-0 focus-visible:ring-0 p-6 leading-relaxed"
+                placeholder="# 프로젝트 제목\n\n내용을 입력하세요..."
+                spellCheck={false}
+              />
             </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-
+          )}
+        </div>
         {/* 하단 버튼 영역 */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center gap-4 mt-6">
           <Button variant="outline" onClick={handleBackToInput} size="lg">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            입력 단계로 돌아가기
+            다시 생성하기
           </Button>
           <Button onClick={handleFinalSubmit} disabled={!markdown.trim()} size="lg">
             이 내용으로 WBS 생성하기
@@ -298,7 +315,6 @@ export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
       </div>
     );
   }
-
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
