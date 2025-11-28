@@ -18,6 +18,7 @@ import { Calendar, CalendarDays, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { useDeleteTask, useTasks, useUpdateTask } from '@/shared/hooks/queries/useTaskQuery';
+import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
 
 export function GanttChartView() {
   const params = useParams();
@@ -122,11 +123,7 @@ export function GanttChartView() {
 
   // 로딩 상태
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-muted-foreground">로딩 중...</div>
-      </div>
-    );
+    return <GanttChartSkeleton />;
   }
 
   // 에러 상태

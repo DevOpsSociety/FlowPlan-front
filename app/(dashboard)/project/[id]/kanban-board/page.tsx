@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { KanbanBoardView } from '@/features/kanban/components/KanbanBoardView';
+import { KanbanBoard } from '@/features/kanban/components/KanbanBoard';
 import { KanbanBoardSkeleton } from '@/features/kanban/skeletons/KanbanBoardSkeleton';
 
 /**
@@ -11,7 +11,7 @@ import { KanbanBoardSkeleton } from '@/features/kanban/skeletons/KanbanBoardSkel
 export default function KanbanBoardPage() {
   return (
     <Suspense fallback={<KanbanBoardSkeleton />}>
-      <KanbanBoardView />
+      <KanbanBoard />
     </Suspense>
   );
 }
