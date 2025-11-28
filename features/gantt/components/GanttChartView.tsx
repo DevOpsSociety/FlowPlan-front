@@ -16,8 +16,8 @@ import {
   type ITask as SvarTask,
 } from '@svar-ui/react-gantt';
 import '@svar-ui/react-gantt/all.css';
-import { RefreshCw, Save } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Calendar, CalendarDays, RefreshCw, Save } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 
 interface GanttChartViewProps {
   projectId: string;
@@ -42,6 +42,27 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
 
   // API 초기화 상태 추적
   const [apiInitialized, setApiInitialized] = useState(false);
+
+  // 뷰 모드 (일별/월별)
+  const [viewMode, setViewMode] = useState<'day' | 'month'>('day');
+
+  // 뷰 모드에 따른 스케일 설정
+  const scales = useMemo(() => {
+    if (viewMode === 'day') {
+      return [
+        { unit: 'month', step: 1, format: 'MMMM yyyy' },
+        { unit: 'day', step: 1, format: 'd' },
+      ];
+    } else {
+      return [
+        { unit: 'year', step: 1, format: 'yyyy' },
+        { unit: 'month', step: 1, format: 'MMM' },
+      ];
+    }
+  }, [viewMode]);
+
+  // 뷰 모드에 따른 셀 너비
+  const cellWidth = viewMode === 'month' ? 120 : 50;
 
   // API 초기화
   const handleInit = (api: IApi) => {
@@ -147,6 +168,27 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">간트차트</h3>
         <div className="flex items-center space-x-2">
+          {/* 뷰 모드 전환 버튼 */}
+          <div className="flex items-center border rounded-md">
+            <Button
+              onClick={() => setViewMode('day')}
+              variant={viewMode === 'day' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-r-none"
+            >
+              <CalendarDays className="h-4 w-4 mr-2" />
+              일별
+            </Button>
+            <Button
+              onClick={() => setViewMode('month')}
+              variant={viewMode === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              className="rounded-l-none"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              월별
+            </Button>
+          </div>
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             새로고침
@@ -178,10 +220,8 @@ export function GanttChartView({ projectId: _projectId }: GanttChartViewProps) {
                 { id: 'text', header: '작업명' },
                 { id: 'action', header: '', width: 50, align: 'center' },
               ]}
-              scales={[
-                { unit: 'month', step: 1, format: 'MMMM yyyy' },
-                { unit: 'day', step: 1, format: 'd' },
-              ]}
+              scales={scales}
+              cellWidth={cellWidth}
               init={handleInit}
               onaddtask={handleAddTask}
               onupdatetask={handleUpdateTask}
