@@ -1,6 +1,7 @@
 'use client';
 
 import { useTasks, useUpdateTask } from '@/shared/hooks/queries/useTaskQuery';
+import { useToast } from '@/shared/hooks/useToast';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -8,9 +9,8 @@ import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Progress } from '@/shared/ui/progress';
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { Calendar, Clock, RefreshCw } from 'lucide-react';
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import { useToast } from '@/shared/hooks/useToast';
+import { Calendar, Clock, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
 
@@ -139,7 +139,8 @@ export function KanbanBoard() {
       .toUpperCase();
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | undefined) => {
+    if (!date) return '-';
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   };
 
