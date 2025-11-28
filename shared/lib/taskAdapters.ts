@@ -1,5 +1,6 @@
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 
 /**
  * 칸반 상태를 Task의 status로 변환
@@ -238,6 +239,92 @@ export const ganttToTask = (svarTasks: SvarTask[], originalTasks: Task[]): Task[
 
   const counter = { value: 1 };
   return originalTasks.map((task) => updateTask(task, counter));
+};
+
+// ===== API ↔ SVAR 직접 변환 함수 =====
+
+/**
+ * API 응답 → SVAR Gantt 형식
+ *
+ * 백엔드가 이미 SVAR 형식과 거의 일치하게 데이터를 보내주므로
+ * 최소한의 변환만 수행합니다.
+ *
+ * @param apiTask - API에서 받은 TaskFlatDto (객체 분해 할당)
+ * @returns SVAR Gantt가 렌더링할 수 있는 ITask
+ */
+export const apiTaskToSvar = ({
+  id,
+  name,
+  start,
+  end,
+  duration,
+  progress,
+  parent,
+  status,
+  assignee,
+}: TaskFlatDto): SvarTask => {
+  const svarTask: SvarTask = {
+    id,
+    text: name, // name → text
+    start: new Date(start), // string → Date
+    end: new Date(end), // string → Date
+    duration,
+    progress,
+  };
+
+  // parent가 있으면 추가
+  if (parent !== null) {
+    svarTask.parent = parent;
+  }
+
+  // 커스텀 속성 저장
+  (svarTask as any).status = status;
+  (svarTask as any).assignee = assignee;
+
+  return svarTask;
+};
+
+/**
+ * SVAR Gantt → API 수정 요청 형식
+ *
+ * SVAR에서 변경된 작업을 API UpdateTaskDto 형식으로 변환
+ *
+ * @param svarTask - SVAR Gantt의 ITask (객체 분해 할당)
+ * @returns API 수정 요청에 사용할 데이터
+ */
+export const svarToApiUpdate = ({ text, start, end, progress, ...rest }: SvarTask) => {
+  return {
+    name: text,
+    startDate: start ? start.toISOString().split('T')[0] : undefined,
+    endDate: end ? end.toISOString().split('T')[0] : undefined,
+    progress,
+    status: (rest as any).status,
+    // assigneeId는 별도 처리 필요 (assignee 문자열 → ID 매핑)
+  };
+};
+
+/**
+ * API 상태 → 한글 상태 매핑
+ */
+export const mapApiStatusToKorean = (apiStatus: string): string => {
+  const mapping: Record<string, string> = {
+    TODO: '할일',
+    IN_PROGRESS: '진행중',
+    DONE: '완료',
+  };
+  return mapping[apiStatus] || '할일';
+};
+
+/**
+ * 한글 상태 → API 상태 매핑
+ */
+export const mapKoreanToApiStatus = (koreanStatus: string): string => {
+  const mapping: Record<string, string> = {
+    할일: 'TODO',
+    진행중: 'IN_PROGRESS',
+    완료: 'DONE',
+  };
+  return mapping[koreanStatus] || 'TODO';
 };
 
 // ===== 하위 호환성을 위한 별칭 (Deprecated) =====

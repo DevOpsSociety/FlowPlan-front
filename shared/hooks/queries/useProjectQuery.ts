@@ -5,35 +5,15 @@ import { getProject as getStoredProject } from '@/shared/lib/storage';
 import { mockProjects } from '@/shared/lib/mockData';
 
 /**
- * 쿼리 키 상수
- * TanStack Query의 캐시 키를 일관되게 관리
- */
-export const QUERY_KEYS = {
-  project: (id: string) => ['project', id] as const,
-  tasks: (projectId: string) => ['tasks', projectId] as const,
-};
-
-/**
- * 클라이언트 컴포넌트에서 프로젝트 데이터를 조회하는 커스텀 훅
+ * 프로젝트 기본 정보 조회 훅
  *
- * 서버에서 HydrationBoundary로 prefetch된 데이터가 있으면 즉시 사용하고,
- * 없으면 이 queryFn이 실행됩니다.
- *
- * @param projectId - 프로젝트 ID
- * @returns TanStack Query 결과 (data, isLoading, error, etc.)
- *
- * @example
- * function ProjectView({ projectId }: { projectId: string }) {
- *   const { data: project, isLoading } = useProjectQuery(projectId)
- *   if (isLoading) return <div>Loading...</div>
- *   return <div>{project.title}</div>
- * }
+ * localStorage mock 데이터 조회 (백엔드 연동 전 임시)
  */
 export function useProjectQuery(projectId: string) {
   return useQuery({
-    queryKey: QUERY_KEYS.project(projectId),
+    queryKey: ['project', projectId],
     queryFn: async () => {
-      // Mock 단계: localStorage에서 먼저 시도
+      // localStorage에서 먼저 시도
       const storedProject = getStoredProject(projectId);
       if (storedProject) {
         return {
@@ -41,7 +21,7 @@ export function useProjectQuery(projectId: string) {
           title: storedProject.title,
           description: storedProject.description,
           teamSize: storedProject.teamSize,
-          duration: storedProject.duration,
+          duration_days: storedProject.duration,
         };
       }
 
@@ -53,7 +33,7 @@ export function useProjectQuery(projectId: string) {
           title: mockProject.name,
           description: mockProject.description,
           teamSize: mockProject.teamMembers.length,
-          duration: 90,
+          duration_days: 90,
         };
       }
 
@@ -62,17 +42,3 @@ export function useProjectQuery(projectId: string) {
     staleTime: 1000 * 60 * 5, // 5분
   });
 }
-
-// 🔄 백엔드 연동 후 (다음 주) 아래 코드로 교체:
-// import apiClient from '@/shared/lib/apiClient' // axios 인스턴스
-//
-// export function useProjectQuery(projectId: string) {
-//   return useQuery({
-//     queryKey: QUERY_KEYS.project(projectId),
-//     queryFn: async () => {
-//       const response = await apiClient.get(`/projects/${projectId}`)
-//       return response.data
-//     },
-//     staleTime: 1000 * 60 * 5,
-//   })
-// }

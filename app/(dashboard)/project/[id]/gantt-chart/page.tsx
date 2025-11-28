@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { GanttChartViewWrapper } from '@/features/gantt/components/GanttChartViewWrapper';
+import { GanttChartView } from '@/features/gantt/components/GanttChartView';
 import { GanttChartSkeleton } from '@/features/gantt/skeletons/GanttChartSkeleton';
 
 /**
@@ -11,7 +11,7 @@ import { GanttChartSkeleton } from '@/features/gantt/skeletons/GanttChartSkeleto
 export default function GanttChartPage() {
   return (
     <Suspense fallback={<GanttChartSkeleton />}>
-      <GanttChartViewWrapper />
+      <GanttChartView />
     </Suspense>
   );
 }
