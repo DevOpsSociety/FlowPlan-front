@@ -1,5 +1,6 @@
 'use client';
 
+import { useDeleteTask, useTasks, useUpdateTask } from '@/shared/hooks/queries/useTaskQuery';
 import { useToast } from '@/shared/hooks/useToast';
 import { svarToApiUpdate } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
@@ -17,7 +18,6 @@ import '@svar-ui/react-gantt/all.css';
 import { Calendar, CalendarDays, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
-import { useDeleteTask, useTasks, useUpdateTask } from '@/shared/hooks/queries/useTaskQuery';
 import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
 
 export function GanttChartView() {
@@ -29,7 +29,14 @@ export function GanttChartView() {
   // API에서 작업 목록 조회 (이미 SVAR 형식으로 변환됨)
   const { data: tasks = [], isLoading, error, refetch } = useTasks(projectId);
 
-  console.log('tasks', tasks);
+  // 데이터 호출 확인용 콘솔 로그
+  console.log('📅 [간트차트] 작업 데이터 조회:', {
+    projectId,
+    totalTasks: tasks.length,
+    tasks,
+    isLoading,
+    error,
+  });
 
   // Mutations
   const updateTaskMutation = useUpdateTask(projectId);

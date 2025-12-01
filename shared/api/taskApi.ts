@@ -1,5 +1,10 @@
 import { apiRequest } from '@/shared/lib/apiClient';
-import type { TaskFlatDto, CreateTaskDto, UpdateTaskDto } from './taskTypes';
+import type {
+  CreateTaskDto,
+  ProjectWithTasksResponseDto,
+  TaskFlatDto,
+  UpdateTaskDto,
+} from './taskTypes';
 
 /**
  * 프로젝트의 모든 작업 조회
@@ -7,10 +12,10 @@ import type { TaskFlatDto, CreateTaskDto, UpdateTaskDto } from './taskTypes';
  * GET /api/tasks/projects/{projectId}/tasks
  *
  * @param projectId - 프로젝트 ID
- * @returns TaskFlatDto 배열
+ * @returns ProjectWithTasksResponseDto (프로젝트 정보 + 작업 목록)
  */
-export const fetchTasks = async (projectId: string): Promise<TaskFlatDto[]> => {
-  return apiRequest<TaskFlatDto[]>(`/api/tasks/projects/${projectId}/tasks`);
+export const fetchTasks = async (projectId: string): Promise<ProjectWithTasksResponseDto> => {
+  return apiRequest<ProjectWithTasksResponseDto>(`/api/tasks/projects/${projectId}/tasks`);
 };
 
 /**

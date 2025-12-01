@@ -1,19 +1,34 @@
-// ===== 간트차트 API 타입 (api.json 스펙 매핑) =====
+// ===== Task API 타입 (api.json 스펙 매핑) =====
 
 /**
  * TaskFlatResponseDto (api.json)
- * 백엔드에서 반환하는 평탄화된 작업 구조
+ * GET /api/tasks/projects/{projectId}/tasks 응답
+ * 백엔드에서 반환하는 평탄화(Flat)된 작업 구조
  */
 export interface TaskFlatDto {
-  id: number;
-  parent: number | null;
+  id: number; // int64
+  parent: number | null; // int64, nullable
   name: string;
-  start: string; // date (YYYY-MM-DD)
-  end: string; // date (YYYY-MM-DD)
-  duration: number;
-  progress: number; // 0-100
+  start: string; // date format (YYYY-MM-DD)
+  end: string; // date format (YYYY-MM-DD)
+  duration: number; // int32 (일 단위)
+  progress: number; // int32 (0-100)
   status: 'TODO' | 'IN_PROGRESS' | 'DONE';
-  assignee: string;
+  assignee: string; // 담당자 이름
+}
+
+/**
+ * ProjectWithTasksResponseDto (api.json)
+ * GET /api/tasks/projects/{projectId}/tasks 응답
+ * 프로젝트 정보와 작업 목록을 함께 반환
+ */
+export interface ProjectWithTasksResponseDto {
+  projectId: number; // int64
+  projectName: string;
+  projectTopic: string;
+  memberCount: number; // int32
+  expectedDurationMonths: number; // int32
+  tasks: TaskFlatDto[]; // TaskFlatResponseDto 배열
 }
 
 /**

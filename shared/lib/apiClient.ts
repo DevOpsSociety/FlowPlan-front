@@ -21,20 +21,50 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
     ...options?.headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  console.log('🌐 [API Client] 요청 시작:', {
+    url,
+    method: options?.method || 'GET',
     headers,
+    body: options?.body,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
-  // 204 No Content 처리
-  if (response.status === 204) {
-    return undefined as T;
-  }
+    console.log('📡 [API Client] 응답 받음:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
 
-  return response.json();
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ [API Client] 에러 응답:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        errorText,
+      });
+      throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    // 204 No Content 처리
+    if (response.status === 204) {
+      console.log('✅ [API Client] 204 No Content');
+      return undefined as T;
+    }
+
+    const data = await response.json();
+    console.log('✅ [API Client] 성공:', { url, data });
+    return data;
+  } catch (error) {
+    console.error('💥 [API Client] 예외 발생:', { url, error });
+    throw error;
+  }
 }

@@ -80,11 +80,28 @@ export function KanbanBoard() {
   // API에서 작업 목록 조회 (SVAR 형식으로 변환됨)
   const { data: tasks = [], isLoading, error, refetch } = useTasks(projectId);
 
+  // 데이터 호출 확인용 콘솔 로그
+  console.log('📋 [칸반보드] 작업 데이터 조회:', {
+    projectId,
+    totalTasks: tasks.length,
+    tasks,
+    isLoading,
+    error,
+  });
+
   // Mutations
   const updateTaskMutation = useUpdateTask(projectId);
 
   // 칸반 컬럼별로 그룹화
   const kanbanTasks = groupTasksByStatus(tasks);
+
+  // 그룹화된 데이터 확인용 콘솔 로그
+  console.log('📊 [칸반보드] 컬럼별 그룹화:', {
+    todo: kanbanTasks.todo.length,
+    inProgress: kanbanTasks['in-progress'].length,
+    done: kanbanTasks.done.length,
+    kanbanTasks,
+  });
 
   // 드래그앤드롭 핸들러
   const handleDragEnd = (result: DropResult) => {
