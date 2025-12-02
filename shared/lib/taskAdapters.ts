@@ -1,6 +1,6 @@
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
 import type { TaskFlatDto } from '@/shared/api/taskTypes';
+import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
+import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 
 /**
  * 칸반 상태를 Task의 status로 변환
@@ -48,11 +48,17 @@ export const calculateProgressFromStatus = (status: TaskStatus): number => {
 /**
  * 기간(duration_days)으로부터 종료일 자동 계산
  * CLAUDE.md의 자동 계산 로직 구현
+ *
+ * Duration의 의미:
+ * - duration = 1: 시작일과 종료일이 같음 (1일간 작업)
+ * - duration = 2: 종료일 = 시작일 + 1 (2일간 작업)
+ * - duration = n: 종료일 = 시작일 + (n-1)
  */
 export const calculateEndDateFromDuration = (startDate: string, durationDays: number): string => {
   const start = new Date(startDate);
   const end = new Date(start);
-  end.setDate(start.getDate() + durationDays);
+  // duration - 1을 더함 (duration=1이면 0일 추가, 즉 시작일과 같음)
+  end.setDate(start.getDate() + (durationDays - 1));
   return end.toISOString().split('T')[0];
 };
 
@@ -219,10 +225,11 @@ export const ganttToTask = (svarTasks: SvarTask[], originalTasks: Task[]): Task[
         }
       : task;
 
-    // end_date 재계산
+    // end_date 재계산 (duration - 1을 더함)
     if (svarTask?.start && svarTask?.duration) {
       const endDate = new Date(svarTask.start);
-      endDate.setDate(endDate.getDate() + svarTask.duration);
+      // duration - 1을 더함 (duration=1이면 0일 추가, 즉 시작일과 같음)
+      endDate.setDate(endDate.getDate() + (svarTask.duration - 1));
       updatedTask.end_date = endDate.toISOString().split('T')[0];
     }
 
@@ -263,11 +270,22 @@ export const apiTaskToSvar = ({
   status,
   assignee,
 }: TaskFlatDto): SvarTask => {
+  const startDate = new Date(start);
+  let endDate = new Date(end);
+
+  // SVAR Gantt는 start와 end가 정확히 같으면 바를 표시하지 않음
+  // duration=1 (하루짜리 작업)일 때 시각적으로 표시하기 위해
+  // end를 같은 날의 23:59:59로 설정
+  if (start === end || duration === 1) {
+    endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
   const svarTask: SvarTask = {
     id,
     text: name, // name → text
-    start: new Date(start), // string → Date
-    end: new Date(end), // string → Date
+    start: startDate, // string → Date
+    end: endDate, // string → Date (같은 날이면 23:59:59로 조정)
     duration,
     progress,
   };

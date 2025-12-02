@@ -1,6 +1,12 @@
 'use client';
 
-import { useDeleteTask, useTasks, useUpdateTask } from '@/shared/hooks/queries/useTaskQuery';
+import { CreateTaskDto } from '@/shared/api/taskTypes';
+import {
+  useCreateTask,
+  useDeleteTask,
+  useTasks,
+  useUpdateTask,
+} from '@/shared/hooks/queries/useTaskQuery';
 import { useToast } from '@/shared/hooks/useToast';
 import { svarToApiUpdate } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
@@ -15,7 +21,8 @@ import {
   type IApi,
 } from '@svar-ui/react-gantt';
 import '@svar-ui/react-gantt/all.css';
-import { Calendar, CalendarDays, RefreshCw } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar, CalendarDays, ChevronsDown, ChevronsUp, Plus, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
@@ -39,6 +46,7 @@ export function GanttChartView() {
   });
 
   // Mutations
+  const createTaskMutation = useCreateTask(projectId);
   const updateTaskMutation = useUpdateTask(projectId);
   const deleteTaskMutation = useDeleteTask(projectId);
 
@@ -87,6 +95,47 @@ export function GanttChartView() {
     });
   };
 
+  // 작업 추가 핸들러
+  const handleAddTask = () => {
+    const today = new Date();
+
+    const newTask: CreateTaskDto = {
+      name: '새 작업',
+      startDate: format(today, 'yyyy-MM-dd'),
+      endDate: format(today, 'yyyy-MM-dd'), // duration=1이 되도록 시작일과 같게 설정
+      status: 'TODO',
+      progress: 0,
+    };
+
+    createTaskMutation.mutate(newTask);
+  };
+
+  // 모두 펼치기
+  const handleExpandAll = () => {
+    if (!apiRef.current) return;
+    const state = apiRef.current.getState();
+    const allTasks = state.tasks.serialize();
+
+    allTasks.forEach((task: any) => {
+      if (!task.open) {
+        apiRef.current?.exec('open-task', { id: task.id, mode: true });
+      }
+    });
+  };
+
+  // 모두 접기
+  const handleCollapseAll = () => {
+    if (!apiRef.current) return;
+    const state = apiRef.current.getState();
+    const allTasks = state.tasks.serialize();
+
+    allTasks.forEach((task: any) => {
+      if (task.open) {
+        apiRef.current?.exec('open-task', { id: task.id, mode: false });
+      }
+    });
+  };
+
   // 작업 업데이트 이벤트
   const handleUpdateTask = (ev: any) => {
     console.log('작업 업데이트됨:', ev);
@@ -98,6 +147,24 @@ export function GanttChartView() {
     const updatedTask = allTasks?.find((t: any) => t.id === taskId);
 
     if (updatedTask) {
+      // SVAR의 duration은 무시하고, start와 end로부터 올바른 duration 계산
+      // duration = (end - start) + 1 (포함적 일수 계산)
+      if (updatedTask.start && updatedTask.end) {
+        const startDate = new Date(updatedTask.start);
+        const endDate = new Date(updatedTask.end);
+        const daysDiff = Math.ceil(
+          (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        updatedTask.duration = daysDiff + 1; // 포함적 계산
+
+        console.log('Duration 재계산:', {
+          start: startDate.toISOString().split('T')[0],
+          end: endDate.toISOString().split('T')[0],
+          daysDiff,
+          duration: updatedTask.duration,
+        });
+      }
+
       const updates = svarToApiUpdate(updatedTask);
       updateTaskMutation.mutate({ taskId, updates });
     }
@@ -152,7 +219,13 @@ export function GanttChartView() {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">간트차트</h3>
         <div className="flex items-center space-x-2">
-          {/* 뷰 모드 전환 버튼 */}
+          {/* 1. 새로고침 */}
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            새로고침
+          </Button>
+
+          {/* 2. 일별/월별 */}
           <div className="flex items-center border rounded-md">
             <Button
               onClick={() => setViewMode('day')}
@@ -173,9 +246,23 @@ export function GanttChartView() {
               월별
             </Button>
           </div>
-          <Button onClick={handleRefresh} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            새로고침
+
+          {/* 3. 모두 펼치기 */}
+          <Button onClick={handleExpandAll} variant="outline" size="sm">
+            <ChevronsDown className="h-4 w-4 mr-2" />
+            모두 펼치기
+          </Button>
+
+          {/* 4. 모두 접기 */}
+          <Button onClick={handleCollapseAll} variant="outline" size="sm">
+            <ChevronsUp className="h-4 w-4 mr-2" />
+            모두 접기
+          </Button>
+
+          {/* 5. 작업 추가 */}
+          <Button onClick={handleAddTask} variant="outline" size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            작업 추가
           </Button>
         </div>
       </div>

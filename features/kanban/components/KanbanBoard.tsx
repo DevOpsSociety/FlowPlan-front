@@ -116,6 +116,15 @@ export function KanbanBoard() {
   // 칸반 컬럼별로 그룹화
   const kanbanTasks = groupTasksByStatus(tasks);
 
+  // 하위 작업 기반 진행률 계산
+  const calculateProgressFromSubtasks = (subtasks: SvarTask[]): number => {
+    if (subtasks.length === 0) return 0;
+
+    const completedCount = subtasks.filter((s) => (s as any).status === 'DONE').length;
+
+    return Math.round((completedCount / subtasks.length) * 100);
+  };
+
   // 드래그앤드롭 핸들러
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -132,13 +141,27 @@ export function KanbanBoard() {
     const newKanbanStatus = destination.droppableId as 'todo' | 'in-progress' | 'done';
     const newApiStatus = kanbanToApiStatus(newKanbanStatus);
 
-    // 상태에 따른 자동 진행률 계산
-    let newProgress: number | undefined;
+    // 하위 작업을 고려한 진행률 계산
+    const taskId = Number(draggableId);
+    const subtasks = getSubtasks(tasks, taskId);
+    let newProgress: number;
+
     if (newKanbanStatus === 'done') {
       newProgress = 100;
-    } else if (newKanbanStatus === 'in-progress') {
-      newProgress = 50;
     } else if (newKanbanStatus === 'todo') {
+      newProgress = 0;
+    } else if (newKanbanStatus === 'in-progress') {
+      // 하위 작업이 있으면 하위 작업 기반 계산, 없으면 기존 진행률 유지
+      if (subtasks.length > 0) {
+        newProgress = calculateProgressFromSubtasks(subtasks);
+      } else {
+        const currentTask = tasks.find((t) => t.id === taskId);
+        const currentProgress = currentTask?.progress ?? 0;
+
+        // DONE(100%)에서 IN_PROGRESS로 오면 0으로, 나머지는 기존값 유지
+        newProgress = currentProgress === 100 ? 0 : currentProgress;
+      }
+    } else {
       newProgress = 0;
     }
 
@@ -184,17 +207,15 @@ export function KanbanBoard() {
       done: 100,
     };
 
-    // 오늘 날짜와 7일 후 날짜
+    // 오늘 날짜 (duration=1이 되도록 시작일과 종료일을 같게 설정)
     const today = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 7);
 
     const taskData: CreateTaskDto = {
       name: taskName,
       status: statusMapping[columnId],
       progress: progressMapping[columnId],
       startDate: today.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      endDate: today.toISOString().split('T')[0], // duration=1이 되도록 시작일과 같게 설정
     };
 
     createTaskMutation.mutate(taskData, {
@@ -217,7 +238,8 @@ export function KanbanBoard() {
   const toggleSubtaskCompletion = (
     subtaskId: number,
     currentStatus: string,
-    subtaskName: string
+    subtaskName: string,
+    parentTaskId: number
   ) => {
     const newStatus = currentStatus === 'DONE' ? 'TODO' : 'DONE';
     const newProgress = newStatus === 'DONE' ? 100 : 0;
@@ -228,6 +250,7 @@ export function KanbanBoard() {
       oldStatus: currentStatus,
       newStatus,
       newProgress,
+      parentTaskId,
     });
 
     updateTaskMutation.mutate(
@@ -241,6 +264,31 @@ export function KanbanBoard() {
       {
         onSuccess: () => {
           console.log('✅ [하위 작업 상태 변경 성공]', { subtaskId, subtaskName, newStatus });
+
+          // 상위 작업의 진행률 자동 업데이트
+          const allSubtasks = getSubtasks(tasks, parentTaskId);
+
+          // 현재 변경된 하위 작업의 상태를 반영하여 계산
+          const updatedSubtasks = allSubtasks.map((s) =>
+            s.id === subtaskId ? { ...s, status: newStatus, progress: newProgress } : s
+          );
+
+          const parentProgress = calculateProgressFromSubtasks(updatedSubtasks as SvarTask[]);
+
+          console.log('📊 [상위 작업 진행률 업데이트]', {
+            parentTaskId,
+            totalSubtasks: allSubtasks.length,
+            completedSubtasks: updatedSubtasks.filter((s: any) => s.status === 'DONE').length,
+            newProgress: parentProgress,
+          });
+
+          // 상위 작업 진행률 업데이트
+          updateTaskMutation.mutate({
+            taskId: parentTaskId,
+            updates: {
+              progress: parentProgress,
+            },
+          });
         },
         onError: (err) => {
           console.error('❌ [하위 작업 상태 변경 실패]', err);
@@ -537,7 +585,8 @@ export function KanbanBoard() {
                                                         toggleSubtaskCompletion(
                                                           subtask.id as number,
                                                           (subtask as any).status,
-                                                          subtask.text ?? '이름 없는 하위 작업'
+                                                          subtask.text ?? '이름 없는 하위 작업',
+                                                          task.id as number
                                                         )
                                                       }
                                                       className="mt-0.5"
