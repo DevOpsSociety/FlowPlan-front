@@ -8,6 +8,7 @@ import {
   useUpdateTask,
 } from '@/shared/hooks/queries/useTaskQuery';
 import { useToast } from '@/shared/hooks/useToast';
+import { apiTaskToSvar } from '@/shared/lib/taskAdapters';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -21,7 +22,7 @@ import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 import { Calendar, Clock, ListChecks, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
 
 interface KanbanColumn {
@@ -107,8 +108,9 @@ export function KanbanBoard() {
     done: false,
   });
 
-  // API에서 작업 목록 조회 (SVAR 형식으로 변환됨)
-  const { data: tasks = [], isLoading, error, refetch } = useTasks(projectId);
+  // API에서 원본 데이터를 가져와서 SVAR 형식으로 변환
+  const { data: rawTasks = [], isLoading, error, refetch } = useTasks(projectId);
+  const tasks = useMemo(() => rawTasks.map(apiTaskToSvar), [rawTasks]);
 
   // Mutations
   const updateTaskMutation = useUpdateTask(projectId);
