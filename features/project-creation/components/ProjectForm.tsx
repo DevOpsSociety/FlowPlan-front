@@ -17,7 +17,7 @@ interface CreateProjectRequest {
   projectName: string;
   projectType: string;
   teamSize: number;
-  expectedDurationDays: number;
+  expectedDurationMonths: number;
   startDate: string;
   endDate: string;
   budget: number;
@@ -119,17 +119,16 @@ export function ProjectForm({ onSubmit, isLoading }: ProjectFormProps) {
     setIsGeneratingMarkdown(true);
 
     try {
-      // 프론트엔드 State 데이터를 API 스펙에 맞게 변환
       const requestBody: CreateProjectRequest = {
         projectName: formData.projectName,
-        projectType: formData.subject, // 주제를 projectType으로 매핑
-        teamSize: Number(formData.teamSize) || 0, // 숫자로 변환
-        expectedDurationDays: (Number(formData.duration) || 0) * 30, // 개월 수를 일수로 변환 (대략적)
-        startDate: formData.startDate || new Date().toISOString(), // 값이 없으면 현재 날짜
+        projectType: formData.subject,
+        teamSize: Number(formData.teamSize) || 0,
+        expectedDurationMonths: Number(formData.duration) || 0,
+        startDate: formData.startDate || new Date().toISOString(),
         endDate: formData.endDate || new Date().toISOString(),
-        budget: Number(formData.budget) || 0, // 숫자로 변환
+        budget: Number(formData.budget) || 0,
         priority: formData.priority || '보통',
-        // 쉼표(,)로 구분된 문자열을 배열로 변환하고 앞뒤 공백 제거
+
         stakeholders: formData.stakeholders
           ? formData.stakeholders
               .split(',')
