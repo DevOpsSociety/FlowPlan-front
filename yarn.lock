@@ -1213,7 +1213,7 @@
     "@svar-ui/react-core" "2.3.1"
     "@svar-ui/react-menu" "2.3.1"
 
-"@svar-ui/react-core@2.3.1":
+"@svar-ui/react-core@2.3.1", "@svar-ui/react-core@^2.3.1":
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/@svar-ui/react-core/-/react-core-2.3.1.tgz#89d03cae18c583e6b0d6c565ca941865148ae18c"
   integrity sha512-J4IkKf+pwVjO+p0vINW+kqXI/0Zb6CtefY39hMyRYF+X0VV+1/5rj0sQBH5eR5A76Y/oX+dUT2uStYtydPolcg==

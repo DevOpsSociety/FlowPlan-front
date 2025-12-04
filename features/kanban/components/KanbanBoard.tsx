@@ -93,10 +93,12 @@ export function KanbanBoard() {
   const { toast } = useToast();
 
   // 새 작업 추가를 위한 state (컬럼별)
-  const [newTaskInputs, setNewTaskInputs] = useState<Record<string, string>>({
-    todo: '',
-    'in-progress': '',
-    done: '',
+  const [newTaskInputs, setNewTaskInputs] = useState<
+    Record<string, { name: string; assignee: string }>
+  >({
+    todo: { name: '', assignee: '' },
+    'in-progress': { name: '', assignee: '' },
+    done: { name: '', assignee: '' },
   });
 
   const [showNewTaskInput, setShowNewTaskInput] = useState<Record<string, boolean>>({
@@ -186,7 +188,9 @@ export function KanbanBoard() {
 
   // 작업 추가 핸들러
   const handleAddTask = (columnId: 'todo' | 'in-progress' | 'done') => {
-    const taskName = newTaskInputs[columnId].trim();
+    const taskName = newTaskInputs[columnId].name.trim();
+    // const assigneeName = newTaskInputs[columnId].assignee.trim();
+
     if (!taskName) {
       toast({
         title: '작업 이름을 입력하세요',
@@ -216,12 +220,18 @@ export function KanbanBoard() {
       progress: progressMapping[columnId],
       startDate: today.toISOString().split('T')[0],
       endDate: today.toISOString().split('T')[0], // duration=1이 되도록 시작일과 같게 설정
+      // API 스펙상 assigneeId(number)가 필요하지만, 현재 사용자 목록이 없으므로
+      // UI에서 입력받은 이름을 임시로 처리하거나 추후 매핑 로직 필요
+      // (현재는 타입 정의에 assignee 문자열 필드가 없으므로 전송되지 않음)
     };
 
     createTaskMutation.mutate(taskData, {
       onSuccess: () => {
         // 입력창 초기화 및 닫기
-        setNewTaskInputs((prev) => ({ ...prev, [columnId]: '' }));
+        setNewTaskInputs((prev) => ({
+          ...prev,
+          [columnId]: { name: '', assignee: '' },
+        }));
         setShowNewTaskInput((prev) => ({ ...prev, [columnId]: false }));
       },
     });
@@ -360,6 +370,18 @@ export function KanbanBoard() {
             <RefreshCw className="h-4 w-4 mr-2" />
             새로고침
           </Button>
+          <Button
+            onClick={() =>
+              setShowNewTaskInput((prev) => ({
+                ...prev,
+                todo: !prev.todo,
+              }))
+            }
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            작업 추가
+          </Button>
         </div>
       </div>
 
@@ -387,30 +409,17 @@ export function KanbanBoard() {
                             {columnTasks.length}
                           </Badge>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            setShowNewTaskInput((prev) => ({
-                              ...prev,
-                              [column.id]: !prev[column.id],
-                            }))
-                          }
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
                       </div>
-
                       {/* 새 작업 추가 입력창 */}
                       {showNewTaskInput[column.id] && (
                         <div className="mb-3 space-y-2">
                           <Input
                             placeholder="작업 이름 입력..."
-                            value={newTaskInputs[column.id]}
+                            value={newTaskInputs[column.id].name}
                             onChange={(e) =>
                               setNewTaskInputs((prev) => ({
                                 ...prev,
-                                [column.id]: e.target.value,
+                                [column.id]: { ...prev[column.id], name: e.target.value },
                               }))
                             }
                             onKeyDown={(e) => {
@@ -421,10 +430,38 @@ export function KanbanBoard() {
                                   ...prev,
                                   [column.id]: false,
                                 }));
-                                setNewTaskInputs((prev) => ({ ...prev, [column.id]: '' }));
+                                setNewTaskInputs((prev) => ({
+                                  ...prev,
+                                  [column.id]: { name: '', assignee: '' },
+                                }));
                               }
                             }}
                             autoFocus
+                            className="mb-2"
+                          />
+                          <Input
+                            placeholder="담당자 이름 입력..."
+                            value={newTaskInputs[column.id].assignee}
+                            onChange={(e) =>
+                              setNewTaskInputs((prev) => ({
+                                ...prev,
+                                [column.id]: { ...prev[column.id], assignee: e.target.value },
+                              }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                handleAddTask(column.id);
+                              } else if (e.key === 'Escape') {
+                                setShowNewTaskInput((prev) => ({
+                                  ...prev,
+                                  [column.id]: false,
+                                }));
+                                setNewTaskInputs((prev) => ({
+                                  ...prev,
+                                  [column.id]: { name: '', assignee: '' },
+                                }));
+                              }
+                            }}
                           />
                           <div className="flex gap-2">
                             <Button
@@ -442,7 +479,10 @@ export function KanbanBoard() {
                                   ...prev,
                                   [column.id]: false,
                                 }));
-                                setNewTaskInputs((prev) => ({ ...prev, [column.id]: '' }));
+                                setNewTaskInputs((prev) => ({
+                                  ...prev,
+                                  [column.id]: { name: '', assignee: '' },
+                                }));
                               }}
                             >
                               취소
