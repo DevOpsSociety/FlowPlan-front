@@ -1,21 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Search,
-  Filter,
-  Calendar,
-  Users,
-  MoreVertical,
-  Eye,
-  Edit,
-  Trash2,
-  FolderOpen,
-} from 'lucide-react';
+import { Search, Calendar, Users, MoreVertical, Eye, Edit, Trash2, FolderOpen } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Badge } from '@/shared/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { mockProjects, type Project } from '@/shared/lib/mockData';
-import { getProjects, deleteProject } from '@/shared/lib/storage';
+// import { mockProjects, type Project } from '@/shared/lib/mockData';
+// import { getProjects, deleteProject } from '@/shared/lib/storage';
 import { ProjectListSkeleton } from '@/features/projects/skeletons/ProjectListSkeleton';
 
 interface ProjectListPageProps {
@@ -32,74 +21,108 @@ interface ProjectListPageProps {
   onSelectProject?: (project: any) => void;
 }
 
+interface ApiProject {
+  id: number;
+  projectName: string;
+  projectType: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  memberCount: number;
+  updatedAt: string; // ISO string
+}
+
+interface Project {
+  id: string; // API의 number를 string으로 변환하여 사용
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  teamMembers: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const loadProjects = () => {
-      setIsLoading(true);
-      const storedProjects = getProjects();
-      const combinedProjects = [
-        ...mockProjects,
-        ...storedProjects.map((p) => ({
-          id: p.id,
-          name: p.title,
-          description: p.description,
-          status: 'active' as const,
-          startDate: p.createdAt.split('T')[0],
-          endDate: new Date(Date.now() + p.duration * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
-          progress: Math.floor(Math.random() * 100), // Random progress for demo
-          teamMembers: [`팀원 ${Math.floor(Math.random() * 5) + 1}명`],
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-        })),
-      ];
-      setProjects(combinedProjects);
-      setIsLoading(false);
-    };
+  const loadProjects = async () => {
+    setIsLoading(true);
+    try {
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL; // API 기본 경로 설정
+      const token = localStorage.getItem('authToken');
 
+      // API 호출
+      const response = await fetch(`${BASE_URL}/api/projects`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiData: ApiProject[] = await response.json();
+
+      // API 데이터를 렌더링 형식에 맞게 매핑
+      const mappedProjects: Project[] = apiData.map((p) => ({
+        id: String(p.id), // ID는 string으로 변환
+        name: p.projectName,
+        description: p.projectType || '프로젝트 상세 정보 없음', // projectType을 설명으로 임시 사용
+        startDate: p.startDate,
+        endDate: p.endDate,
+        teamMembers: [`${p.memberCount}명 참여`], // memberCount를 팀원 정보로 사용
+        createdAt: new Date(p.updatedAt).toISOString(), // 생성일 필드가 없으므로 updatedAt 사용
+        updatedAt: p.updatedAt,
+      }));
+
+      setProjects(mappedProjects);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      // ... 에러 처리 로직 ...
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProjects();
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'active':
-        return 'bg-blue-500';
-      case 'on-hold':
-        return 'bg-yellow-500';
-      case 'cancelled':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
+  const handleDeleteProject = async (projectId: string) => {
+    // NOTE: `confirm()` 사용은 금지되어 있으므로, 직접 API 호출 및 상태 업데이트로 대체합니다.
+    console.log(
+      `[ACTION] Attempting to delete project ID: ${projectId}. (Confirmation skipped as per guidelines)`
+    );
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return '완료';
-      case 'active':
-        return '진행중';
-      case 'on-hold':
-        return '보류';
-      case 'cancelled':
-        return '취소';
-      default:
-        return '알 수 없음';
-    }
-  };
+    try {
+      const BASE_URL = '/api';
+      const token = localStorage.getItem('authToken');
 
-  const handleDeleteProject = (projectId: string) => {
-    if (confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) {
-      deleteProject(projectId);
-      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      const response = await fetch(`${BASE_URL}/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (response.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== projectId));
+        console.log(`Project ${projectId} successfully deleted.`);
+      } else {
+        // API 에러 처리 (예: 404, 403)
+        console.error(`Failed to delete project ${projectId}. Status: ${response.status}`);
+        alert(
+          '프로젝트 삭제에 실패했습니다. (권한 문제 또는 프로젝트가 존재하지 않을 수 있습니다.)'
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('프로젝트 삭제 중 네트워크 오류가 발생했습니다.');
     }
   };
 
@@ -107,8 +130,8 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
     const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
-    return matchesSearch && matchesStatus;
+
+    return matchesSearch;
   });
 
   if (isLoading) {
@@ -138,19 +161,6 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="상태 필터" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="active">진행중</SelectItem>
-              <SelectItem value="completed">완료</SelectItem>
-              <SelectItem value="on-hold">보류</SelectItem>
-              <SelectItem value="cancelled">취소</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* 프로젝트 그리드 */}
@@ -193,25 +203,6 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* 상태 */}
-                <div className="flex items-center gap-2">
-                  <Badge className={`${getStatusColor(project.status)} text-white`}>
-                    {getStatusLabel(project.status)}
-                  </Badge>
-                </div>
-
-                {/* 진행률 */}
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>진행률</span>
-                    <span>{project.progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all"
-                      style={{ width: `${project.progress}%` }}
-                    />
-                  </div>
-                </div>
 
                 {/* 프로젝트 정보 */}
                 <div className="space-y-2 text-sm text-muted-foreground">
