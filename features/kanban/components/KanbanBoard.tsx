@@ -14,13 +14,15 @@ import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Progress } from '@/shared/ui/progress';
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import { Calendar, Clock, ListChecks, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Calendar, Clock, ListChecks, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
@@ -108,6 +110,16 @@ export function KanbanBoard() {
     done: false,
   });
 
+  // 작업 수정을 위한 state
+  const [editingTask, setEditingTask] = useState<{
+    id: number;
+    name: string;
+    progress: number;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
   // API에서 원본 데이터를 가져와서 SVAR 형식으로 변환
   const { data: rawTasks = [], isLoading, error, refetch } = useTasks(projectId);
   const tasks = useMemo(() => rawTasks.map(apiTaskToSvar), [rawTasks]);
@@ -155,15 +167,11 @@ export function KanbanBoard() {
     } else if (newKanbanStatus === 'todo') {
       newProgress = 0;
     } else if (newKanbanStatus === 'in-progress') {
-      // 하위 작업이 있으면 하위 작업 기반 계산, 없으면 기존 진행률 유지
+      // 하위 작업이 있으면 하위 작업 기반 계산, 없으면 1로 설정 (시작됨 의미)
       if (subtasks.length > 0) {
         newProgress = calculateProgressFromSubtasks(subtasks);
       } else {
-        const currentTask = tasks.find((t) => t.id === taskId);
-        const currentProgress = currentTask?.progress ?? 0;
-
-        // DONE(100%)에서 IN_PROGRESS로 오면 0으로, 나머지는 기존값 유지
-        newProgress = currentProgress === 100 ? 0 : currentProgress;
+        newProgress = 1;
       }
     } else {
       newProgress = 0;
@@ -244,6 +252,52 @@ export function KanbanBoard() {
     if (window.confirm(`"${taskName}" 작업을 삭제하시겠습니까?`)) {
       deleteTaskMutation.mutate(taskId);
     }
+  };
+
+  // 작업 수정 핸들러
+  const handleEditTask = () => {
+    if (!editingTask) return;
+
+    // 진행률에 따른 상태 결정
+    let newStatus = 'TODO';
+    if (editingTask.progress === 100) {
+      newStatus = 'DONE';
+    } else if (editingTask.progress > 0) {
+      newStatus = 'IN_PROGRESS';
+    }
+
+    updateTaskMutation.mutate(
+      {
+        taskId: editingTask.id,
+        updates: {
+          name: editingTask.name,
+          progress: editingTask.progress,
+          status: newStatus, // 상태 업데이트 추가
+          startDate: editingTask.startDate,
+          endDate: editingTask.endDate,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditOpen(false);
+          setEditingTask(null);
+          toast({
+            title: '작업이 수정되었습니다',
+          });
+        },
+      }
+    );
+  };
+
+  const openEditDialog = (task: SvarTask) => {
+    setEditingTask({
+      id: Number(task.id),
+      name: task.text || '',
+      progress: task.progress || 0,
+      startDate: task.start ? task.start.toISOString().split('T')[0] : '',
+      endDate: task.end ? task.end.toISOString().split('T')[0] : '',
+    });
+    setIsEditOpen(true);
   };
 
   // 하위 작업 완료 상태 토글 (API 연동)
@@ -520,20 +574,33 @@ export function KanbanBoard() {
                                         <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
                                           {task.text}
                                         </h5>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 hover:bg-destructive/10"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteTask(
-                                              task.id as number,
-                                              task.text ?? '이름 없는 작업'
-                                            );
-                                          }}
-                                        >
-                                          <Trash2 className="h-3 w-3 text-destructive" />
-                                        </Button>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0 hover:bg-muted"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openEditDialog(task);
+                                            }}
+                                          >
+                                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0 hover:bg-destructive/10"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteTask(
+                                                task.id as number,
+                                                task.text ?? '이름 없는 작업'
+                                              );
+                                            }}
+                                          >
+                                            <Trash2 className="h-3 w-3 text-destructive" />
+                                          </Button>
+                                        </div>
                                       </div>
                                     </CardHeader>
                                     <CardContent className="pt-0 space-y-3">
@@ -683,6 +750,93 @@ export function KanbanBoard() {
           })}
         </div>
       </DragDropContext>
+
+      {/* 작업 수정 다이얼로그 */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>작업 수정</DialogTitle>
+          </DialogHeader>
+          {editingTask && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="task-name">작업 이름</Label>
+                <Input
+                  id="task-name"
+                  value={editingTask.name}
+                  onChange={(e) =>
+                    setEditingTask((prev) => (prev ? { ...prev, name: e.target.value } : null))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="task-progress">진행률 ({editingTask.progress}%)</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="task-progress"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={editingTask.progress}
+                    onChange={(e) =>
+                      setEditingTask((prev) =>
+                        prev ? { ...prev, progress: Number(e.target.value) } : null
+                      )
+                    }
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editingTask.progress}
+                    onChange={(e) =>
+                      setEditingTask((prev) =>
+                        prev ? { ...prev, progress: Number(e.target.value) } : null
+                      )
+                    }
+                    className="w-20"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-date">시작일</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={editingTask.startDate}
+                    onChange={(e) =>
+                      setEditingTask((prev) =>
+                        prev ? { ...prev, startDate: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">종료일</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={editingTask.endDate}
+                    onChange={(e) =>
+                      setEditingTask((prev) => (prev ? { ...prev, endDate: e.target.value } : null))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              취소
+            </Button>
+            <Button onClick={handleEditTask} disabled={updateTaskMutation.isPending}>
+              저장
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
