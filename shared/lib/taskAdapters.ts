@@ -1,5 +1,6 @@
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 import type { Task, TaskStatus } from '@/shared/lib/apiTypes';
+import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 
 /**
  * 칸반 상태를 Task의 status로 변환
@@ -47,11 +48,17 @@ export const calculateProgressFromStatus = (status: TaskStatus): number => {
 /**
  * 기간(duration_days)으로부터 종료일 자동 계산
  * CLAUDE.md의 자동 계산 로직 구현
+ *
+ * Duration의 의미:
+ * - duration = 1: 시작일과 종료일이 같음 (1일간 작업)
+ * - duration = 2: 종료일 = 시작일 + 1 (2일간 작업)
+ * - duration = n: 종료일 = 시작일 + (n-1)
  */
 export const calculateEndDateFromDuration = (startDate: string, durationDays: number): string => {
   const start = new Date(startDate);
   const end = new Date(start);
-  end.setDate(start.getDate() + durationDays);
+  // duration - 1을 더함 (duration=1이면 0일 추가, 즉 시작일과 같음)
+  end.setDate(start.getDate() + (durationDays - 1));
   return end.toISOString().split('T')[0];
 };
 
@@ -218,10 +225,11 @@ export const ganttToTask = (svarTasks: SvarTask[], originalTasks: Task[]): Task[
         }
       : task;
 
-    // end_date 재계산
+    // end_date 재계산 (duration - 1을 더함)
     if (svarTask?.start && svarTask?.duration) {
       const endDate = new Date(svarTask.start);
-      endDate.setDate(endDate.getDate() + svarTask.duration);
+      // duration - 1을 더함 (duration=1이면 0일 추가, 즉 시작일과 같음)
+      endDate.setDate(endDate.getDate() + (svarTask.duration - 1));
       updatedTask.end_date = endDate.toISOString().split('T')[0];
     }
 
@@ -238,6 +246,103 @@ export const ganttToTask = (svarTasks: SvarTask[], originalTasks: Task[]): Task[
 
   const counter = { value: 1 };
   return originalTasks.map((task) => updateTask(task, counter));
+};
+
+// ===== API ↔ SVAR 직접 변환 함수 =====
+
+/**
+ * API 응답 → SVAR Gantt 형식
+ *
+ * 백엔드가 이미 SVAR 형식과 거의 일치하게 데이터를 보내주므로
+ * 최소한의 변환만 수행합니다.
+ *
+ * @param apiTask - API에서 받은 TaskFlatDto (객체 분해 할당)
+ * @returns SVAR Gantt가 렌더링할 수 있는 ITask
+ */
+export const apiTaskToSvar = ({
+  id,
+  name,
+  start,
+  end,
+  duration,
+  progress,
+  parent,
+  status,
+  assignee,
+}: TaskFlatDto): SvarTask => {
+  const startDate = new Date(start);
+  let endDate = new Date(end);
+
+  // SVAR Gantt는 start와 end가 정확히 같으면 바를 표시하지 않음
+  // duration=1 (하루짜리 작업)일 때 시각적으로 표시하기 위해
+  // end를 같은 날의 23:59:59로 설정
+  if (start === end || duration === 1) {
+    endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  const svarTask: SvarTask = {
+    id,
+    text: name, // name → text
+    start: startDate, // string → Date
+    end: endDate, // string → Date (같은 날이면 23:59:59로 조정)
+    duration,
+    progress,
+  };
+
+  // parent가 있으면 추가
+  if (parent !== null) {
+    svarTask.parent = parent;
+  }
+
+  // 커스텀 속성 저장
+  (svarTask as any).status = status;
+  (svarTask as any).assignee = assignee;
+
+  return svarTask;
+};
+
+/**
+ * SVAR Gantt → API 수정 요청 형식
+ *
+ * SVAR에서 변경된 작업을 API UpdateTaskDto 형식으로 변환
+ *
+ * @param svarTask - SVAR Gantt의 ITask (객체 분해 할당)
+ * @returns API 수정 요청에 사용할 데이터
+ */
+export const svarToApiUpdate = ({ text, start, end, progress, ...rest }: SvarTask) => {
+  return {
+    name: text,
+    startDate: start ? start.toISOString().split('T')[0] : undefined,
+    endDate: end ? end.toISOString().split('T')[0] : undefined,
+    progress,
+    status: (rest as any).status,
+    // assigneeId는 별도 처리 필요 (assignee 문자열 → ID 매핑)
+  };
+};
+
+/**
+ * API 상태 → 한글 상태 매핑
+ */
+export const mapApiStatusToKorean = (apiStatus: string): string => {
+  const mapping: Record<string, string> = {
+    TODO: '할일',
+    IN_PROGRESS: '진행중',
+    DONE: '완료',
+  };
+  return mapping[apiStatus] || '할일';
+};
+
+/**
+ * 한글 상태 → API 상태 매핑
+ */
+export const mapKoreanToApiStatus = (koreanStatus: string): string => {
+  const mapping: Record<string, string> = {
+    할일: 'TODO',
+    진행중: 'IN_PROGRESS',
+    완료: 'DONE',
+  };
+  return mapping[koreanStatus] || 'TODO';
 };
 
 // ===== 하위 호환성을 위한 별칭 (Deprecated) =====

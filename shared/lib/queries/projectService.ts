@@ -15,19 +15,21 @@ import { mockProjects, mockProjectTasks } from '@/shared/lib/mockData';
  * const project = await getProjectById(params.id)
  */
 export const getProjectById = cache(async (projectId: string) => {
-  // Mock 단계: localStorage에서 먼저 시도
-  const storedProject = getStoredProject(projectId);
-  if (storedProject) {
-    return {
-      id: storedProject.id,
-      title: storedProject.title,
-      description: storedProject.description,
-      teamSize: storedProject.teamSize,
-      duration: storedProject.duration,
-    };
+  // 클라이언트 환경에서만 localStorage 접근
+  if (typeof window !== 'undefined') {
+    const storedProject = getStoredProject(projectId);
+    if (storedProject) {
+      return {
+        id: storedProject.id,
+        title: storedProject.title,
+        description: storedProject.description,
+        teamSize: storedProject.teamSize,
+        duration: storedProject.duration,
+      };
+    }
   }
 
-  // Mock 데이터에서 조회
+  // Mock 데이터에서 조회 (서버/클라이언트 모두 가능)
   const mockProject = mockProjects.find((p) => p.id === projectId);
   if (mockProject) {
     return {

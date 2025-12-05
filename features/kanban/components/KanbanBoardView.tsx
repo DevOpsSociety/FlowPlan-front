@@ -1,8 +1,8 @@
 'use client';
 
+import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { QUERY_KEYS } from '@/shared/hooks/queries/useProjectQuery';
 import { KanbanBoard } from './KanbanBoard';
 
 /**

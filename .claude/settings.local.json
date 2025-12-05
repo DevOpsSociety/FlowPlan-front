@@ -50,7 +50,11 @@
       "Bash(bash scripts/update-imports.sh \"@/components/shared/ai-markdown-editor\" \"@/features/collaboration/components/ai-markdown-editor\")",
       "Bash(git add .)",
       "Bash(cat:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(rmdir:*)",
+      "Bash(yarn build)"
     ],
     "deny": [],
     "ask": []

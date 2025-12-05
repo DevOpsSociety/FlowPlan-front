@@ -67,9 +67,9 @@ export function ProjectHeader({ project, wbsTasks, onShowTeam }: ProjectHeaderPr
   return (
     <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
       <div>
-        <h1 className="text-3xl font-bold text-balance">{project.title}</h1>
+        <h1 className="text-3xl font-bold text-balance">{project.name}</h1>
         <p className="text-muted-foreground mt-1">
-          {project.teamSize}명 • {project.duration_days}개월 예상 • AI 생성됨
+          {project.memberCount}명 • {project.expectedDurationMonths}개월 예상 • AI 생성됨
         </p>
         <div className="flex items-center mt-2 text-xs text-muted-foreground">
           <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
