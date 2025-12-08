@@ -1,7 +1,12 @@
 'use client';
 
 import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
-import { fetchProjectMembers, updateMemberRole } from '@/shared/api/memberApi';
+import {
+  fetchProjectMembers,
+  leaveProject,
+  removeMember,
+  updateMemberRole,
+} from '@/shared/api/memberApi';
 import type { ProjectMemberDto, ProjectMemberRole } from '@/shared/api/memberTypes';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
@@ -17,6 +22,7 @@ import {
 } from '@/shared/ui/DropdownMenu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Mail, MoreVertical, Shield, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { InviteMemberDialog } from './InviteMemberDialog';
@@ -28,6 +34,7 @@ interface TeamManagementPageProps {
 }
 
 export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProps) {
+  const router = useRouter();
   const [teamMembers, setTeamMembers] = useState<ProjectMemberDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
@@ -99,22 +106,62 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
     }
   };
 
-  // TODO: 팀원 제거 API 연동 (3차 작업)
-  // const handleRemoveMember = async (memberId: number) => {
-  //   if (!confirm('정말로 이 팀원을 제거하시겠습니까?')) return;
-  //
-  //   setIsLoading(true);
-  //   try {
-  //     await removeMember(projectId, memberId);
-  //     await loadTeamMembers();
-  //     toast.success('팀원이 제거되었습니다');
-  //   } catch (error) {
-  //     console.error('Failed to remove member:', error);
-  //     toast.error('팀원 제거에 실패했습니다');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  /**
+   * 팀원 제거 핸들러
+   */
+  const handleRemoveMember = async (memberId: number, memberName: string) => {
+    if (!confirm(`정말로 "${memberName}"님을 팀에서 제거하시겠습니까?`)) return;
+
+    setIsLoading(true);
+    try {
+      await removeMember(projectId, memberId);
+      toast.success('팀원이 제거되었습니다');
+      await loadTeamMembers();
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+      const message = error instanceof Error ? error.message : '팀원 제거에 실패했습니다';
+      toast.error('팀원 제거 실패', {
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * 프로젝트 나가기 핸들러 (본인)
+   */
+  const handleLeaveProject = async () => {
+    // 마지막 관리자인지 확인
+    const ownerCount = teamMembers.filter((m) => m.role === 'OWNER').length;
+    const isOnlyOwner = currentUserRole === 'OWNER' && ownerCount === 1;
+
+    if (isOnlyOwner) {
+      toast.error('프로젝트를 나갈 수 없습니다', {
+        description:
+          '마지막 관리자는 프로젝트를 떠날 수 없습니다. 먼저 다른 멤버를 관리자로 지정해주세요.',
+      });
+      return;
+    }
+
+    if (!confirm('정말로 이 프로젝트를 나가시겠습니까?')) return;
+
+    setIsLoading(true);
+    try {
+      await leaveProject(projectId);
+      toast.success('프로젝트를 나갔습니다');
+      // 프로젝트 목록으로 리디렉션
+      router.push('/projects');
+    } catch (error) {
+      console.error('Failed to leave project:', error);
+      const message = error instanceof Error ? error.message : '프로젝트 나가기에 실패했습니다';
+      toast.error('프로젝트 나가기 실패', {
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -222,47 +269,71 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {/* OWNER만 역할 변경/제거 UI 표시 (본인 제외) */}
-                        {currentUserRole === 'OWNER' &&
-                          member.userEmail !== getCurrentUserEmail() && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>작업</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateRole(member.memberId, 'OWNER')}
-                                  disabled={member.role === 'OWNER'}
-                                >
-                                  <Shield className="h-4 w-4 mr-2" />
-                                  관리자로 변경
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateRole(member.memberId, 'EDITOR')}
-                                  disabled={member.role === 'EDITOR'}
-                                >
-                                  <Mail className="h-4 w-4 mr-2" />
-                                  멤버로 변경
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateRole(member.memberId, 'VIEWER')}
-                                  disabled={member.role === 'VIEWER'}
-                                >
-                                  <Shield className="h-4 w-4 mr-2" />
-                                  뷰어로 변경
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem disabled className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  팀에서 제거 (추후 구현)
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
+                        {/* 드롭다운 메뉴: OWNER가 다른 사람 관리 OR 본인의 프로젝트 나가기 */}
+                        {((currentUserRole === 'OWNER' &&
+                          member.userEmail !== getCurrentUserEmail()) ||
+                          member.userEmail === getCurrentUserEmail()) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {member.userEmail === getCurrentUserEmail() ? (
+                                // 본인인 경우: 프로젝트 나가기만
+                                <>
+                                  <DropdownMenuLabel>작업</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={handleLeaveProject}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    프로젝트 나가기
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                // 다른 사람인 경우: 역할 변경/제거
+                                <>
+                                  <DropdownMenuLabel>작업</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'OWNER')}
+                                    disabled={member.role === 'OWNER'}
+                                  >
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    관리자로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'EDITOR')}
+                                    disabled={member.role === 'EDITOR'}
+                                  >
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    멤버로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'VIEWER')}
+                                    disabled={member.role === 'VIEWER'}
+                                  >
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    뷰어로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleRemoveMember(member.memberId, member.userName)
+                                    }
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    팀에서 제거
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
