@@ -12,6 +12,7 @@ import 'dhtmlx-gantt/codebase/dhtmlxgantt.css';
 import { Calendar, CalendarDays, Plus } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
 
 // dhtmlx-gantt 타입 정의
@@ -273,13 +274,30 @@ export function GanttChartView() {
 
     // 작업 추가 이벤트 (API 연동)
     gantt.attachEvent('onAfterTaskAdd', (id: any, task: any) => {
+      // ⚠️ Depth 제한 검증 (최대 1단계까지만 허용)
+      if (task.parent && task.parent !== 0) {
+        const parentTask = gantt.getTask(task.parent);
+
+        // 부모의 부모가 있으면 = 2단계 하위 작업 시도 → 차단
+        if (parentTask && parentTask.parent && parentTask.parent !== 0) {
+          gantt.deleteTask(id); // dhtmlx-gantt에서 작업 삭제
+          toast.error('하위 작업은 최대 1단계까지만 생성할 수 있습니다');
+          return; // ⚠️ 조기 종료 - API 호출 안 함
+        }
+      }
+
       const startDateStr = gantt.templates.format_date(task.start_date);
+
+      // 🎯 핵심: task.parent 추출 (0이면 null, 숫자면 해당 ID)
+      const parentId = task.parent && task.parent !== 0 ? task.parent : null;
+
       createMutationRef.current.mutate({
         name: task.text,
         startDate: dhtmlxDateToApi(startDateStr),
         endDate: dhtmlxDateToApi(startDateStr),
         progress: Math.round(task.progress * 100),
         status: 'TODO',
+        parentId: parentId, // ✅ parentId: null (최상위) 또는 숫자 (하위 작업)
       });
     });
 
