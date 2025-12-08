@@ -59,6 +59,18 @@ const dhtmlxDateToApi = (dateStr: string): string => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * progress 값에 따른 status 결정
+ * - 0: TODO
+ * - 1~99: IN_PROGRESS
+ * - 100: DONE
+ */
+const getStatusFromProgress = (progress: number): 'TODO' | 'IN_PROGRESS' | 'DONE' => {
+  if (progress === 0) return 'TODO';
+  if (progress === 100) return 'DONE';
+  return 'IN_PROGRESS';
+};
+
 export function GanttChartView() {
   const params = useParams();
   const projectId = params.id as string;
@@ -219,12 +231,42 @@ export function GanttChartView() {
     gantt.attachEvent('onAfterTaskUpdate', (id: any, task: any) => {
       console.log('📝 [Gantt] onAfterTaskUpdate:', { id, task, progress: task.progress });
       const startDateStr = gantt.templates.format_date(task.start_date);
+
+      // endDate 계산: start_date + duration
+      const endDate = gantt.calculateEndDate(task.start_date, task.duration);
+      const endDateStr = gantt.templates.format_date(endDate);
+
+      const progressValue = Math.round(task.progress * 100);
       updateMutationRef.current.mutate({
         taskId: Number(id),
         updates: {
           name: task.text,
           startDate: dhtmlxDateToApi(startDateStr),
-          progress: Math.round(task.progress * 100),
+          endDate: dhtmlxDateToApi(endDateStr),
+          progress: progressValue,
+          status: getStatusFromProgress(progressValue),
+        },
+      });
+    });
+
+    // 진행률 드래그 완료 이벤트 (drag_progress 사용 시)
+    gantt.attachEvent('onAfterTaskDrag', (id: any, mode: any, e: any) => {
+      const task = gantt.getTask(id);
+      console.log('🎯 [Gantt] onAfterTaskDrag:', { id, mode, progress: task.progress });
+
+      const startDateStr = gantt.templates.format_date(task.start_date as Date);
+      const endDate = gantt.calculateEndDate(task.start_date as Date, task.duration || 1);
+      const endDateStr = gantt.templates.format_date(endDate as Date);
+
+      const progressValue = Math.round((task.progress || 0) * 100);
+      updateMutationRef.current.mutate({
+        taskId: Number(id),
+        updates: {
+          name: task.text,
+          startDate: dhtmlxDateToApi(startDateStr),
+          endDate: dhtmlxDateToApi(endDateStr),
+          progress: progressValue,
+          status: getStatusFromProgress(progressValue),
         },
       });
     });
