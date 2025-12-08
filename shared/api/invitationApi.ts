@@ -1,4 +1,6 @@
+import { apiRequest } from '@/shared/lib/apiClient';
 import type { ApiErrorResponse, InviteTeamMemberDto } from './invitationTypes';
+import { headers } from 'next/headers';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -45,4 +47,19 @@ export const inviteTeamMember = async (
   }
 
   // 성공 시 200 OK, body 없음
+};
+
+/**
+ * 초대 수락
+ *
+ * POST /api/projects/invite/accept?token={token}
+ *
+ * @param token - 초대 토큰
+ */
+export const acceptInvitation = async (token: string): Promise<void> => {
+  console.log('✉️ [acceptInvitation] Request:', { token });
+
+  await apiRequest<void>(`/api/projects/invite/accept?token=${token}`, {
+    method: 'POST',
+  });
 };
