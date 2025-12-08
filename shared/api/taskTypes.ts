@@ -51,7 +51,7 @@ export interface CreateTaskDto {
  */
 export interface UpdateTaskDto {
   name?: string;
-  assigneeId?: number;
+  assigneeEmail?: string; // 담당자 이메일 (백엔드 스웨거 스펙)
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
   status?: string;
