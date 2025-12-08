@@ -16,9 +16,9 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
   const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
   const headers = {
+    ...options?.headers,
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
-    ...options?.headers,
   };
 
   const url = `${API_BASE_URL}${endpoint}`;
@@ -60,7 +60,22 @@ export async function apiRequest<T>(endpoint: string, options?: RequestInit): Pr
       return undefined as T;
     }
 
-    const data = await response.json();
+    // Content-Length가 0이거나 body가 비어있으면 undefined 반환
+    const contentLength = response.headers.get('content-length');
+    if (contentLength === '0') {
+      console.log('✅ [API Client] 200 OK with empty body (content-length: 0)');
+      return undefined as T;
+    }
+
+    // response body를 먼저 text로 읽어서 비어있는지 확인
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      console.log('✅ [API Client] 200 OK with empty body');
+      return undefined as T;
+    }
+
+    // text를 JSON으로 파싱
+    const data = JSON.parse(text);
     console.log('✅ [API Client] 성공:', { url, data });
     return data;
   } catch (error) {

@@ -1,23 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+  fetchProjectMembers,
+  leaveProject,
+  removeMember,
+  updateMemberRole,
+} from '@/shared/api/memberApi';
+import type { ProjectMemberDto, ProjectMemberRole } from '@/shared/api/memberTypes';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +20,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu';
-import { UserPlus, MoreVertical, Mail, Shield, Trash2, Crown } from 'lucide-react';
-import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
-import { apiService } from '@/shared/lib/apiService';
-import type { TeamMember, UserRole } from '@/shared/lib/apiTypes';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import { Mail, MoreVertical, Shield, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { InviteMemberDialog } from './InviteMemberDialog';
+import { TeamStatsCards } from './TeamStatsCards';
 
 interface TeamManagementPageProps {
   projectId: string;
@@ -37,11 +34,10 @@ interface TeamManagementPageProps {
 }
 
 export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProps) {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<UserRole>('member');
+  const router = useRouter();
+  const [teamMembers, setTeamMembers] = useState<ProjectMemberDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     loadTeamMembers();
@@ -50,92 +46,157 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
   const loadTeamMembers = async () => {
     setIsLoading(true);
     try {
-      const members = await apiService.getTeamMembers(projectId);
+      const members = await fetchProjectMembers(projectId);
       setTeamMembers(members);
+
+      // 현재 사용자의 역할 확인
+      const currentUserEmail = getCurrentUserEmail();
+      if (currentUserEmail) {
+        const currentMember = members.find((m) => m.userEmail === currentUserEmail);
+        setCurrentUserRole(currentMember?.role || null);
+      }
     } catch (error) {
       console.error('Failed to load team members:', error);
+      toast.error('팀원 목록을 불러오는데 실패했습니다');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInviteMember = async () => {
-    if (!inviteEmail) return;
+  /**
+   * localStorage에서 현재 로그인한 사용자의 이메일 가져오기
+   */
+  const getCurrentUserEmail = (): string | null => {
+    if (typeof window === 'undefined') return null;
 
-    setIsLoading(true);
     try {
-      await apiService.inviteTeamMember(projectId, inviteEmail, inviteRole);
-      setIsInviteDialogOpen(false);
-      setInviteEmail('');
-      setInviteRole('member');
-      await loadTeamMembers();
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.email || null;
+      }
     } catch (error) {
-      console.error('Failed to invite member:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Failed to parse user from localStorage:', error);
     }
+    return null;
   };
 
-  const handleUpdateRole = async (memberId: string, newRole: UserRole) => {
+  // 팀원 목록 새로고침 (초대 성공 시 호출)
+  const handleInviteSuccess = () => {
+    loadTeamMembers();
+  };
+
+  /**
+   * 팀원 역할 변경 핸들러
+   */
+  const handleUpdateRole = async (memberId: number, newRole: ProjectMemberRole) => {
     setIsLoading(true);
     try {
-      await apiService.updateTeamMemberRole(projectId, memberId, newRole);
+      await updateMemberRole(projectId, memberId, newRole);
+      toast.success('역할이 변경되었습니다');
       await loadTeamMembers();
     } catch (error) {
       console.error('Failed to update role:', error);
+      const message = error instanceof Error ? error.message : '역할 변경에 실패했습니다';
+      toast.error('역할 변경 실패', {
+        description: message,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('정말로 이 팀원을 제거하시겠습니까?')) return;
+  /**
+   * 팀원 제거 핸들러
+   */
+  const handleRemoveMember = async (memberId: number, memberName: string) => {
+    if (!confirm(`정말로 "${memberName}"님을 팀에서 제거하시겠습니까?`)) return;
 
     setIsLoading(true);
     try {
-      await apiService.removeTeamMember(projectId, memberId);
+      await removeMember(projectId, memberId);
+      toast.success('팀원이 제거되었습니다');
       await loadTeamMembers();
     } catch (error) {
       console.error('Failed to remove member:', error);
+      const message = error instanceof Error ? error.message : '팀원 제거에 실패했습니다';
+      toast.error('팀원 제거 실패', {
+        description: message,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getRoleBadgeVariant = (role: UserRole) => {
+  /**
+   * 프로젝트 나가기 핸들러 (본인)
+   */
+  const handleLeaveProject = async () => {
+    // 마지막 관리자인지 확인
+    const ownerCount = teamMembers.filter((m) => m.role === 'OWNER').length;
+    const isOnlyOwner = currentUserRole === 'OWNER' && ownerCount === 1;
+
+    if (isOnlyOwner) {
+      toast.error('프로젝트를 나갈 수 없습니다', {
+        description:
+          '마지막 관리자는 프로젝트를 떠날 수 없습니다. 먼저 다른 멤버를 관리자로 지정해주세요.',
+      });
+      return;
+    }
+
+    if (!confirm('정말로 이 프로젝트를 나가시겠습니까?')) return;
+
+    setIsLoading(true);
+    try {
+      await leaveProject(projectId);
+      toast.success('프로젝트를 나갔습니다');
+      // 프로젝트 목록으로 리디렉션
+      router.push('/projects');
+    } catch (error) {
+      console.error('Failed to leave project:', error);
+      const message = error instanceof Error ? error.message : '프로젝트 나가기에 실패했습니다';
+      toast.error('프로젝트 나가기 실패', {
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'owner':
+      case 'OWNER':
         return 'default';
-      case 'admin':
+      case 'MEMBER':
+        return 'outline';
+      case 'VIEWER':
         return 'secondary';
-      case 'member':
+      case 'PENDING':
         return 'outline';
       default:
         return 'outline';
     }
   };
 
-  const getRoleIcon = (role: UserRole) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
-      // case "owner":
-      // return <Crown className="h-3 w-3" />;
-      case 'admin':
+      case 'OWNER':
         return <Shield className="h-3 w-3" />;
       default:
         return null;
     }
   };
 
-  const getRoleLabel = (role: UserRole) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
-      // case "owner":
-      // return "소유자";
-      case 'admin':
+      case 'OWNER':
         return '관리자';
-      case 'member':
+      case 'EDITOR':
         return '멤버';
-      case 'viewer':
+      case 'VIEWER':
         return '뷰어';
+      case 'PENDING':
+        return '승인 대기';
       default:
         return role;
     }
@@ -161,55 +222,7 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
               </p>
             </div>
           </div>
-          <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                팀원 초대
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>팀원 초대</DialogTitle>
-                <DialogDescription>이메일 주소로 새로운 팀원을 초대하세요</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">이메일 주소</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="example@email.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">역할</Label>
-                  <Select
-                    value={inviteRole}
-                    onValueChange={(value) => setInviteRole(value as UserRole)}
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member">멤버</SelectItem>
-                      <SelectItem value="admin">관리자</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                  취소
-                </Button>
-                <Button onClick={handleInviteMember} disabled={isLoading || !inviteEmail}>
-                  초대 보내기
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <InviteMemberDialog projectId={projectId} onSuccess={handleInviteSuccess} />
         </div>
       </div>
 
@@ -217,36 +230,7 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Team Overview */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">전체 팀원</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamMembers.length}명</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">관리자</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {teamMembers.filter((m) => m.role === 'admin' || m.role === 'owner').length}명
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">활성 멤버</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {teamMembers.filter((m) => m.status === 'active').length}명
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <TeamStatsCards teamMembers={teamMembers} />
 
           {/* Team Members Table */}
           <Card>
@@ -266,22 +250,18 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                 </TableHeader>
                 <TableBody>
                   {teamMembers.map((member) => (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.memberId}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage
-                              src={member.avatar || '/placeholder.svg'}
-                              alt={member.name}
-                            />
-                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{member.userName.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{member.name}</div>
+                            <div className="font-medium">{member.userName}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{member.email}</TableCell>
+                      <TableCell>{member.userEmail}</TableCell>
                       <TableCell>
                         <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
                           {getRoleIcon(member.role)}
@@ -289,7 +269,10 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {member.role !== 'owner' && (
+                        {/* 드롭다운 메뉴: OWNER가 다른 사람 관리 OR 본인의 프로젝트 나가기 */}
+                        {((currentUserRole === 'OWNER' &&
+                          member.userEmail !== getCurrentUserEmail()) ||
+                          member.userEmail === getCurrentUserEmail()) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="sm">
@@ -297,28 +280,57 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>작업</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateRole(member.id, 'admin')}
-                              >
-                                <Shield className="h-4 w-4 mr-2" />
-                                관리자로 변경
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateRole(member.id, 'member')}
-                              >
-                                <Mail className="h-4 w-4 mr-2" />
-                                멤버로 변경
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleRemoveMember(member.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                팀에서 제거
-                              </DropdownMenuItem>
+                              {member.userEmail === getCurrentUserEmail() ? (
+                                // 본인인 경우: 프로젝트 나가기만
+                                <>
+                                  <DropdownMenuLabel>작업</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={handleLeaveProject}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    프로젝트 나가기
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                // 다른 사람인 경우: 역할 변경/제거
+                                <>
+                                  <DropdownMenuLabel>작업</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'OWNER')}
+                                    disabled={member.role === 'OWNER'}
+                                  >
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    관리자로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'EDITOR')}
+                                    disabled={member.role === 'EDITOR'}
+                                  >
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    멤버로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateRole(member.memberId, 'VIEWER')}
+                                    disabled={member.role === 'VIEWER'}
+                                  >
+                                    <Shield className="h-4 w-4 mr-2" />
+                                    뷰어로 변경
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleRemoveMember(member.memberId, member.userName)
+                                    }
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    팀에서 제거
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}

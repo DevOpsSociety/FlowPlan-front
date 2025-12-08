@@ -117,6 +117,7 @@ export function KanbanBoard() {
     progress: number;
     startDate: string;
     endDate: string;
+    assigneeEmail: string;
   } | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -275,6 +276,7 @@ export function KanbanBoard() {
           status: newStatus, // 상태 업데이트 추가
           startDate: editingTask.startDate,
           endDate: editingTask.endDate,
+          assigneeEmail: editingTask.assigneeEmail ? editingTask.assigneeEmail : null,
         },
       },
       {
@@ -296,6 +298,7 @@ export function KanbanBoard() {
       progress: task.progress || 0,
       startDate: task.start ? task.start.toISOString().split('T')[0] : '',
       endDate: task.end ? task.end.toISOString().split('T')[0] : '',
+      assigneeEmail: '',
     });
     setIsEditOpen(true);
   };
@@ -766,6 +769,20 @@ export function KanbanBoard() {
                   value={editingTask.name}
                   onChange={(e) =>
                     setEditingTask((prev) => (prev ? { ...prev, name: e.target.value } : null))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assignee-email">담당자 이메일</Label>
+                <Input
+                  id="assignee-email"
+                  type="email"
+                  placeholder="example@email.com"
+                  value={editingTask.assigneeEmail}
+                  onChange={(e) =>
+                    setEditingTask((prev) =>
+                      prev ? { ...prev, assigneeEmail: e.target.value } : null
+                    )
                   }
                 />
               </div>
