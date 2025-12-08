@@ -1,23 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
-import { Badge } from '@/shared/ui/badge';
+import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
+import { apiService } from '@/shared/lib/apiService';
+import type { TeamMember, UserRole } from '@/shared/lib/apiTypes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/DropdownMenu';
-import { UserPlus, MoreVertical, Mail, Shield, Trash2, Crown } from 'lucide-react';
-import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
-import { apiService } from '@/shared/lib/apiService';
-import type { TeamMember, UserRole } from '@/shared/lib/apiTypes';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import { Mail, MoreVertical, Shield, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { InviteMemberDialog } from './InviteMemberDialog';
+import { TeamStatsCards } from './TeamStatsCards';
 
 interface TeamManagementPageProps {
   projectId: string;
@@ -38,9 +28,6 @@ interface TeamManagementPageProps {
 
 export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProps) {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<UserRole>('member');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -59,21 +46,9 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
     }
   };
 
-  const handleInviteMember = async () => {
-    if (!inviteEmail) return;
-
-    setIsLoading(true);
-    try {
-      await apiService.inviteTeamMember(projectId, inviteEmail, inviteRole);
-      setIsInviteDialogOpen(false);
-      setInviteEmail('');
-      setInviteRole('member');
-      await loadTeamMembers();
-    } catch (error) {
-      console.error('Failed to invite member:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  // 팀원 목록 새로고침 (초대 성공 시 호출)
+  const handleInviteSuccess = () => {
+    loadTeamMembers();
   };
 
   const handleUpdateRole = async (memberId: string, newRole: UserRole) => {
@@ -161,55 +136,7 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
               </p>
             </div>
           </div>
-          <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                팀원 초대
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>팀원 초대</DialogTitle>
-                <DialogDescription>이메일 주소로 새로운 팀원을 초대하세요</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">이메일 주소</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="example@email.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">역할</Label>
-                  <Select
-                    value={inviteRole}
-                    onValueChange={(value) => setInviteRole(value as UserRole)}
-                  >
-                    <SelectTrigger id="role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member">멤버</SelectItem>
-                      <SelectItem value="admin">관리자</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                  취소
-                </Button>
-                <Button onClick={handleInviteMember} disabled={isLoading || !inviteEmail}>
-                  초대 보내기
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <InviteMemberDialog projectId={projectId} onSuccess={handleInviteSuccess} />
         </div>
       </div>
 
@@ -217,36 +144,7 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Team Overview */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">전체 팀원</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{teamMembers.length}명</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">관리자</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {teamMembers.filter((m) => m.role === 'admin' || m.role === 'owner').length}명
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">활성 멤버</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {teamMembers.filter((m) => m.status === 'active').length}명
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <TeamStatsCards teamMembers={teamMembers} />
 
           {/* Team Members Table */}
           <Card>
