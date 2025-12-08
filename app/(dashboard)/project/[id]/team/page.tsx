@@ -1,12 +1,12 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
 import { TeamManagementPage } from '@/features/team/components/TeamManagementPage';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function TeamManagement() {
   const params = useParams();
   const router = useRouter();
-  const projectId = params.projectId as string;
+  const projectId = params.id as string;
 
   const handleBack = () => {
     router.push(`/project/${projectId}`);

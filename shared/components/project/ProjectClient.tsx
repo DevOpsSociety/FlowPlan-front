@@ -29,7 +29,7 @@ export function ProjectClient({ projectId, children }: ProjectClientProps) {
   });
 
   const handleShowTeam = () => {
-    router.push(`/team/${projectId}`);
+    router.push(`/project/${projectId}/team`);
   };
 
   return (
