@@ -1,9 +1,9 @@
 'use client';
 
 import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
-import { apiService } from '@/shared/lib/apiService';
-import type { TeamMember, UserRole } from '@/shared/lib/apiTypes';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { fetchProjectMembers } from '@/shared/api/memberApi';
+import type { ProjectMemberDto } from '@/shared/api/memberTypes';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -18,6 +18,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Mail, MoreVertical, Shield, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { InviteMemberDialog } from './InviteMemberDialog';
 import { TeamStatsCards } from './TeamStatsCards';
 
@@ -27,8 +28,9 @@ interface TeamManagementPageProps {
 }
 
 export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProps) {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<ProjectMemberDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     loadTeamMembers();
@@ -37,13 +39,39 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
   const loadTeamMembers = async () => {
     setIsLoading(true);
     try {
-      const members = await apiService.getTeamMembers(projectId);
+      const members = await fetchProjectMembers(projectId);
       setTeamMembers(members);
+
+      // 현재 사용자의 역할 확인
+      const currentUserEmail = getCurrentUserEmail();
+      if (currentUserEmail) {
+        const currentMember = members.find((m) => m.userEmail === currentUserEmail);
+        setCurrentUserRole(currentMember?.role || null);
+      }
     } catch (error) {
       console.error('Failed to load team members:', error);
+      toast.error('팀원 목록을 불러오는데 실패했습니다');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  /**
+   * localStorage에서 현재 로그인한 사용자의 이메일 가져오기
+   */
+  const getCurrentUserEmail = (): string | null => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.email || null;
+      }
+    } catch (error) {
+      console.error('Failed to parse user from localStorage:', error);
+    }
+    return null;
   };
 
   // 팀원 목록 새로고침 (초대 성공 시 호출)
@@ -51,66 +79,72 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
     loadTeamMembers();
   };
 
-  const handleUpdateRole = async (memberId: string, newRole: UserRole) => {
-    setIsLoading(true);
-    try {
-      await apiService.updateTeamMemberRole(projectId, memberId, newRole);
-      await loadTeamMembers();
-    } catch (error) {
-      console.error('Failed to update role:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // TODO: 역할 변경 API 연동 (3차 작업)
+  // const handleUpdateRole = async (memberId: number, newRole: ProjectMemberRole) => {
+  //   setIsLoading(true);
+  //   try {
+  //     await updateMemberRole(projectId, memberId, newRole);
+  //     await loadTeamMembers();
+  //     toast.success('역할이 변경되었습니다');
+  //   } catch (error) {
+  //     console.error('Failed to update role:', error);
+  //     toast.error('역할 변경에 실패했습니다');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('정말로 이 팀원을 제거하시겠습니까?')) return;
+  // TODO: 팀원 제거 API 연동 (3차 작업)
+  // const handleRemoveMember = async (memberId: number) => {
+  //   if (!confirm('정말로 이 팀원을 제거하시겠습니까?')) return;
+  //
+  //   setIsLoading(true);
+  //   try {
+  //     await removeMember(projectId, memberId);
+  //     await loadTeamMembers();
+  //     toast.success('팀원이 제거되었습니다');
+  //   } catch (error) {
+  //     console.error('Failed to remove member:', error);
+  //     toast.error('팀원 제거에 실패했습니다');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-    setIsLoading(true);
-    try {
-      await apiService.removeTeamMember(projectId, memberId);
-      await loadTeamMembers();
-    } catch (error) {
-      console.error('Failed to remove member:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getRoleBadgeVariant = (role: UserRole) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'owner':
+      case 'OWNER':
         return 'default';
-      case 'admin':
+      case 'MEMBER':
+        return 'outline';
+      case 'VIEWER':
         return 'secondary';
-      case 'member':
+      case 'PENDING':
         return 'outline';
       default:
         return 'outline';
     }
   };
 
-  const getRoleIcon = (role: UserRole) => {
+  const getRoleIcon = (role: string) => {
     switch (role) {
-      // case "owner":
-      // return <Crown className="h-3 w-3" />;
-      case 'admin':
+      case 'OWNER':
         return <Shield className="h-3 w-3" />;
       default:
         return null;
     }
   };
 
-  const getRoleLabel = (role: UserRole) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
-      // case "owner":
-      // return "소유자";
-      case 'admin':
+      case 'OWNER':
         return '관리자';
-      case 'member':
+      case 'MEMBER':
         return '멤버';
-      case 'viewer':
+      case 'VIEWER':
         return '뷰어';
+      case 'PENDING':
+        return '승인 대기';
       default:
         return role;
     }
@@ -164,22 +198,18 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                 </TableHeader>
                 <TableBody>
                   {teamMembers.map((member) => (
-                    <TableRow key={member.id}>
+                    <TableRow key={member.memberId}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage
-                              src={member.avatar || '/placeholder.svg'}
-                              alt={member.name}
-                            />
-                            <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback>{member.userName.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{member.name}</div>
+                            <div className="font-medium">{member.userName}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{member.email}</TableCell>
+                      <TableCell>{member.userEmail}</TableCell>
                       <TableCell>
                         <Badge variant={getRoleBadgeVariant(member.role)} className="gap-1">
                           {getRoleIcon(member.role)}
@@ -187,39 +217,38 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {member.role !== 'owner' && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>작업</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateRole(member.id, 'admin')}
-                              >
-                                <Shield className="h-4 w-4 mr-2" />
-                                관리자로 변경
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleUpdateRole(member.id, 'member')}
-                              >
-                                <Mail className="h-4 w-4 mr-2" />
-                                멤버로 변경
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleRemoveMember(member.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                팀에서 제거
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+                        {/* OWNER만 역할 변경/제거 UI 표시 (본인 제외) */}
+                        {currentUserRole === 'OWNER' &&
+                          member.userEmail !== getCurrentUserEmail() && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>작업</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem disabled>
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  관리자로 변경 (3찡 작업)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  멤버로 변경 (3찡 작업)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem disabled>
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  뷰어로 변경 (3찡 작업)
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem disabled className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  팀에서 제거 (3찡 작업)
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}

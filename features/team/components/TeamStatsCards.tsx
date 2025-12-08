@@ -1,25 +1,27 @@
 'use client';
 
-import type { TeamMember } from '@/shared/lib/apiTypes';
+import type { ProjectMemberDto } from '@/shared/api/memberTypes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 
 interface TeamStatsCardsProps {
-  teamMembers: TeamMember[];
+  teamMembers: ProjectMemberDto[];
 }
 
 /**
  * 팀 통계 카드 컴포넌트
  * - 전체 팀원 수
- * - 관리자 수 (admin, owner)
- * - 멤버 수 (member)
+ * - 관리자 수 (OWNER)
+ * - 멤버 수 (MEMBER)
+ * - 뷰어 수 (VIEWER)
  */
 export function TeamStatsCards({ teamMembers }: TeamStatsCardsProps) {
   const totalCount = teamMembers.length;
-  const adminCount = teamMembers.filter((m) => m.role === 'admin' || m.role === 'owner').length;
-  const memberCount = teamMembers.filter((m) => m.role === 'member').length;
+  const adminCount = teamMembers.filter((m) => m.role === 'OWNER').length;
+  const memberCount = teamMembers.filter((m) => m.role === 'MEMBER').length;
+  const viewerCount = teamMembers.filter((m) => m.role === 'VIEWER').length;
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">전체 팀원</CardTitle>
@@ -42,6 +44,14 @@ export function TeamStatsCards({ teamMembers }: TeamStatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{memberCount}명</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium">뷰어</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{viewerCount}명</div>
         </CardContent>
       </Card>
     </div>
