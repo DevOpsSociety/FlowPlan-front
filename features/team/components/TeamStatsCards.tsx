@@ -17,7 +17,7 @@ interface TeamStatsCardsProps {
 export function TeamStatsCards({ teamMembers }: TeamStatsCardsProps) {
   const totalCount = teamMembers.length;
   const adminCount = teamMembers.filter((m) => m.role === 'OWNER').length;
-  const memberCount = teamMembers.filter((m) => m.role === 'MEMBER').length;
+  const memberCount = teamMembers.filter((m) => m.role === 'EDITOR').length;
   const viewerCount = teamMembers.filter((m) => m.role === 'VIEWER').length;
 
   return (

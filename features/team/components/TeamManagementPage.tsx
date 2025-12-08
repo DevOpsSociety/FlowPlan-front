@@ -1,8 +1,8 @@
 'use client';
 
 import { TeamManagementSkeleton } from '@/features/team/skeletons/TeamManagementSkeleton';
-import { fetchProjectMembers } from '@/shared/api/memberApi';
-import type { ProjectMemberDto } from '@/shared/api/memberTypes';
+import { fetchProjectMembers, updateMemberRole } from '@/shared/api/memberApi';
+import type { ProjectMemberDto, ProjectMemberRole } from '@/shared/api/memberTypes';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
@@ -79,20 +79,25 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
     loadTeamMembers();
   };
 
-  // TODO: 역할 변경 API 연동 (3차 작업)
-  // const handleUpdateRole = async (memberId: number, newRole: ProjectMemberRole) => {
-  //   setIsLoading(true);
-  //   try {
-  //     await updateMemberRole(projectId, memberId, newRole);
-  //     await loadTeamMembers();
-  //     toast.success('역할이 변경되었습니다');
-  //   } catch (error) {
-  //     console.error('Failed to update role:', error);
-  //     toast.error('역할 변경에 실패했습니다');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  /**
+   * 팀원 역할 변경 핸들러
+   */
+  const handleUpdateRole = async (memberId: number, newRole: ProjectMemberRole) => {
+    setIsLoading(true);
+    try {
+      await updateMemberRole(projectId, memberId, newRole);
+      toast.success('역할이 변경되었습니다');
+      await loadTeamMembers();
+    } catch (error) {
+      console.error('Failed to update role:', error);
+      const message = error instanceof Error ? error.message : '역할 변경에 실패했습니다';
+      toast.error('역할 변경 실패', {
+        description: message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // TODO: 팀원 제거 API 연동 (3차 작업)
   // const handleRemoveMember = async (memberId: number) => {
@@ -139,7 +144,7 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
     switch (role) {
       case 'OWNER':
         return '관리자';
-      case 'MEMBER':
+      case 'EDITOR':
         return '멤버';
       case 'VIEWER':
         return '뷰어';
@@ -229,22 +234,31 @@ export function TeamManagementPage({ projectId, onBack }: TeamManagementPageProp
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>작업</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem disabled>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateRole(member.memberId, 'OWNER')}
+                                  disabled={member.role === 'OWNER'}
+                                >
                                   <Shield className="h-4 w-4 mr-2" />
-                                  관리자로 변경 (3찡 작업)
+                                  관리자로 변경
                                 </DropdownMenuItem>
-                                <DropdownMenuItem disabled>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateRole(member.memberId, 'EDITOR')}
+                                  disabled={member.role === 'EDITOR'}
+                                >
                                   <Mail className="h-4 w-4 mr-2" />
-                                  멤버로 변경 (3찡 작업)
+                                  멤버로 변경
                                 </DropdownMenuItem>
-                                <DropdownMenuItem disabled>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateRole(member.memberId, 'VIEWER')}
+                                  disabled={member.role === 'VIEWER'}
+                                >
                                   <Shield className="h-4 w-4 mr-2" />
-                                  뷰어로 변경 (3찡 작업)
+                                  뷰어로 변경
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem disabled className="text-destructive">
                                   <Trash2 className="h-4 w-4 mr-2" />
-                                  팀에서 제거 (3찡 작업)
+                                  팀에서 제거 (추후 구현)
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
