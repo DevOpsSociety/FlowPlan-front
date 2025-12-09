@@ -53,7 +53,10 @@ export function GanttChartView() {
   // 커스텀 훅들
   useGanttLocale();
   const { contextMenu, setContextMenu, closeContextMenu } = useContextMenu();
-  useGanttChart(containerRef, tasks, viewMode);
+
+  // 로딩 완료 후에만 Gantt 초기화
+  const shouldInitGantt = !isLoading && tasks.length >= 0;
+  useGanttChart(containerRef, tasks, viewMode, shouldInitGantt);
   useGanttEvents(projectId, createMutationRef, updateMutationRef, setContextMenu);
 
   // 액션 핸들러

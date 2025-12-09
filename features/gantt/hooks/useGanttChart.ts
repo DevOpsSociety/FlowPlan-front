@@ -18,13 +18,14 @@ import type { DhtmlxTask } from '../utils/ganttTransformers';
 export function useGanttChart(
   containerRef: RefObject<HTMLDivElement>,
   tasks: DhtmlxTask[],
-  viewMode: 'day' | 'month'
+  viewMode: 'day' | 'month',
+  shouldInit: boolean = true
 ) {
   const ganttInitialized = useRef(false);
 
-  // Gantt 초기화 (한 번만 실행)
+  // Gantt 초기화 (한 번만 실행, shouldInit이 true일 때만)
   useEffect(() => {
-    if (!containerRef.current || ganttInitialized.current) return;
+    if (!shouldInit || !containerRef.current || ganttInitialized.current) return;
 
     // 기본 설정 적용
     Object.assign(gantt.config, ganttBaseConfig);
@@ -49,8 +50,11 @@ export function useGanttChart(
     gantt.locale.labels.section_assignee_email = '담당자 이메일';
     gantt.locale.labels.section_time = '기간';
 
-    // Gantt 초기화
+    // Gantt 초기화 및 데이터 로드
     gantt.init(containerRef.current);
+    gantt.clearAll();
+    gantt.parse({ data: tasks, links: [] });
+
     ganttInitialized.current = true;
 
     // Cleanup
@@ -58,15 +62,7 @@ export function useGanttChart(
       gantt.clearAll();
       ganttInitialized.current = false;
     };
-  }, [containerRef]);
-
-  // 데이터 로드 (tasks 변경 시 실행)
-  useEffect(() => {
-    if (!ganttInitialized.current) return;
-
-    gantt.clearAll();
-    gantt.parse({ data: tasks, links: [] });
-  }, [tasks]);
+  }, [containerRef, shouldInit, tasks]);
 
   // 뷰 모드 변경 (일별/월별)
   useEffect(() => {
