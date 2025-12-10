@@ -123,3 +123,72 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Gantt 차트 태스크 바 색상 (적절한 가시성을 위한 중간 톤) */
+
+/* 태스크 바 텍스트 색상 - 부드러운 진한 회색 */
+.gantt_task_line .gantt_task_content {
+  color: #334155 !important; /* slate-700 - 부드러운 진한 회색 */
+}
+
+.dark .gantt_task_line .gantt_task_content {
+  color: #e2e8f0 !important; /* slate-200 - 부드러운 연한 회색 */
+}
+
+/* TODO 상태 (0%) - slate-300 */
+.gantt_task_line.gantt-task-todo {
+  background-color: #cbd5e1 !important; /* slate-300 */
+  border: 1px solid #94a3b8 !important; /* slate-400 */
+}
+
+.gantt_task_line.gantt-task-todo .gantt_task_progress {
+  background-color: #94a3b8 !important; /* slate-400 */
+}
+
+/* IN_PROGRESS 상태 (1-99%) - blue-300 */
+.gantt_task_line.gantt-task-in-progress {
+  background-color: #93c5fd !important; /* blue-300 */
+  border: 1px solid #60a5fa !important; /* blue-400 */
+}
+
+.gantt_task_line.gantt-task-in-progress .gantt_task_progress {
+  background-color: #60a5fa !important; /* blue-400 */
+}
+
+/* DONE 상태 (100%) - green-300 */
+.gantt_task_line.gantt-task-done {
+  background-color: #86efac !important; /* green-300 */
+  border: 1px solid #4ade80 !important; /* green-400 */
+}
+
+.gantt_task_line.gantt-task-done .gantt_task_progress {
+  background-color: #4ade80 !important; /* green-400 */
+}
+
+/* 다크 모드 지원 */
+.dark .gantt_task_line.gantt-task-todo {
+  background-color: #475569 !important; /* slate-600 */
+  border: 1px solid #334155 !important; /* slate-700 */
+}
+
+.dark .gantt_task_line.gantt-task-todo .gantt_task_progress {
+  background-color: #334155 !important; /* slate-700 */
+}
+
+.dark .gantt_task_line.gantt-task-in-progress {
+  background-color: #3b82f6 !important; /* blue-500 */
+  border: 1px solid #2563eb !important; /* blue-600 */
+}
+
+.dark .gantt_task_line.gantt-task-in-progress .gantt_task_progress {
+  background-color: #2563eb !important; /* blue-600 */
+}
+
+.dark .gantt_task_line.gantt-task-done {
+  background-color: #22c55e !important; /* green-500 */
+  border: 1px solid #16a34a !important; /* green-600 */
+}
+
+.dark .gantt_task_line.gantt-task-done .gantt_task_progress {
+  background-color: #16a34a !important; /* green-600 */
+}

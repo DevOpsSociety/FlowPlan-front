@@ -2,6 +2,8 @@
  * API ↔ dhtmlx-gantt 데이터 변환 유틸리티
  */
 
+import { getStatusFromProgress } from '@/shared/utils/taskStatusUtils';
+
 // dhtmlx-gantt 타입 정의
 export interface DhtmlxTask {
   id: number;
@@ -42,14 +44,5 @@ export const dhtmlxDateToApi = (dateStr: string): string => {
   return `${year}-${month}-${day}`;
 };
 
-/**
- * progress 값에 따른 status 결정
- * - 0: TODO
- * - 1~99: IN_PROGRESS
- * - 100: DONE
- */
-export const getStatusFromProgress = (progress: number): 'TODO' | 'IN_PROGRESS' | 'DONE' => {
-  if (progress === 0) return 'TODO';
-  if (progress === 100) return 'DONE';
-  return 'IN_PROGRESS';
-};
+// Re-export for convenience
+export { getStatusFromProgress };

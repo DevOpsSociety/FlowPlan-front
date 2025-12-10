@@ -3,8 +3,8 @@ import { gantt } from 'dhtmlx-gantt';
 import type { MutableRefObject } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import type { ContextMenuState } from './useContextMenu';
 import { dhtmlxDateToApi, getStatusFromProgress } from '../utils/ganttTransformers';
+import type { ContextMenuState } from './useContextMenu';
 
 /**
  * dhtmlx-gantt 이벤트 핸들러 등록 훅
@@ -51,7 +51,20 @@ export function useGanttEvents(
       const endDate = gantt.calculateEndDate(task.start_date, task.duration);
       const endDateStr = gantt.templates.format_date(endDate);
 
-      const progressValue = Math.round(task.progress * 100);
+      let progressValue = Math.round(task.progress * 100);
+
+      // 하위 작업의 경우 진행률을 0 또는 100으로만 제한
+      if (task.parent && task.parent !== 0) {
+        if (progressValue !== 0 && progressValue !== 100) {
+          // 50% 기준으로 0 또는 100으로 스냅
+          progressValue = progressValue >= 50 ? 100 : 0;
+          // Gantt 차트의 task도 업데이트하여 UI에 반영
+          task.progress = progressValue / 100;
+          gantt.updateTask(id);
+          toast.info('하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.');
+        }
+      }
+
       updateMutationRef.current.mutate({
         taskId: Number(id),
         updates: {
@@ -65,6 +78,26 @@ export function useGanttEvents(
       });
     });
 
+    // 진행률 드래그 시작 전 검증 (하위 작업이 있는 상위 작업 차단)
+    const beforeTaskDragHandler = gantt.attachEvent('onBeforeTaskDrag', (id: any, mode: any) => {
+      const task = gantt.getTask(id);
+
+      // 진행률 드래그 모드인 경우에만 체크 (mode === 'progress')
+      if (mode === 'progress') {
+        // 하위 작업이 있는지 확인
+        const hasSubtasks = gantt.hasChild(id);
+
+        if (hasSubtasks) {
+          toast.error(
+            '하위 작업이 있는 상위 작업의 진행률은 자동으로 계산됩니다. 하위 작업을 수정하세요.'
+          );
+          return false; // 드래그 취소
+        }
+      }
+
+      return true; // 드래그 허용
+    });
+
     // 진행률 드래그 완료 이벤트 (drag_progress 사용 시)
     const taskDragHandler = gantt.attachEvent('onAfterTaskDrag', (id: any, mode: any, e: any) => {
       const task = gantt.getTask(id);
@@ -74,7 +107,20 @@ export function useGanttEvents(
       const endDate = gantt.calculateEndDate(task.start_date as Date, task.duration || 1);
       const endDateStr = gantt.templates.format_date(endDate as Date);
 
-      const progressValue = Math.round((task.progress || 0) * 100);
+      let progressValue = Math.round((task.progress || 0) * 100);
+
+      // 하위 작업의 경우 진행률을 0 또는 100으로만 제한
+      if (task.parent && task.parent !== 0) {
+        if (progressValue !== 0 && progressValue !== 100) {
+          // 50% 기준으로 0 또는 100으로 스냅
+          progressValue = progressValue >= 50 ? 100 : 0;
+          // Gantt 차트의 task도 업데이트하여 UI에 반영
+          task.progress = progressValue / 100;
+          gantt.updateTask(id);
+          toast.info('하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.');
+        }
+      }
+
       updateMutationRef.current.mutate({
         taskId: Number(id),
         updates: {
@@ -122,6 +168,7 @@ export function useGanttEvents(
       gantt.detachEvent(contextMenuHandler);
       gantt.detachEvent(taskCreatedHandler);
       gantt.detachEvent(taskUpdateHandler);
+      gantt.detachEvent(beforeTaskDragHandler);
       gantt.detachEvent(taskDragHandler);
       gantt.detachEvent(taskAddHandler);
     };

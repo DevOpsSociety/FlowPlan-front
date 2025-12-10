@@ -276,7 +276,7 @@ export function KanbanBoard() {
           status: newStatus, // 상태 업데이트 추가
           startDate: editingTask.startDate,
           endDate: editingTask.endDate,
-          assigneeEmail: editingTask.assigneeEmail ? editingTask.assigneeEmail : null,
+          assigneeEmail: editingTask.assigneeEmail || undefined,
         },
       },
       {
@@ -313,7 +313,7 @@ export function KanbanBoard() {
     const newStatus = currentStatus === 'DONE' ? 'TODO' : 'DONE';
     const newProgress = newStatus === 'DONE' ? 100 : 0;
 
-    console.log('📝 [하위 작업 상태 변경]', {
+    console.log('📝 [Kanban] 하위 작업 상태 변경:', {
       subtaskId,
       subtaskName,
       oldStatus: currentStatus,
@@ -322,6 +322,7 @@ export function KanbanBoard() {
       parentTaskId,
     });
 
+    // 하위 작업 업데이트 - useUpdateTask 훅이 자동으로 상위 작업도 업데이트함
     updateTaskMutation.mutate(
       {
         taskId: subtaskId,
@@ -332,35 +333,15 @@ export function KanbanBoard() {
       },
       {
         onSuccess: () => {
-          console.log('✅ [하위 작업 상태 변경 성공]', { subtaskId, subtaskName, newStatus });
-
-          // 상위 작업의 진행률 자동 업데이트
-          const allSubtasks = getSubtasks(tasks, parentTaskId);
-
-          // 현재 변경된 하위 작업의 상태를 반영하여 계산
-          const updatedSubtasks = allSubtasks.map((s) =>
-            s.id === subtaskId ? { ...s, status: newStatus, progress: newProgress } : s
-          );
-
-          const parentProgress = calculateProgressFromSubtasks(updatedSubtasks as SvarTask[]);
-
-          console.log('📊 [상위 작업 진행률 업데이트]', {
+          console.log('✅ [Kanban] 하위 작업 상태 변경 성공 (상위 작업은 자동 업데이트됨):', {
+            subtaskId,
+            subtaskName,
+            newStatus,
             parentTaskId,
-            totalSubtasks: allSubtasks.length,
-            completedSubtasks: updatedSubtasks.filter((s: any) => s.status === 'DONE').length,
-            newProgress: parentProgress,
-          });
-
-          // 상위 작업 진행률 업데이트
-          updateTaskMutation.mutate({
-            taskId: parentTaskId,
-            updates: {
-              progress: parentProgress,
-            },
           });
         },
         onError: (err) => {
-          console.error('❌ [하위 작업 상태 변경 실패]', err);
+          console.error('❌ [Kanban] 하위 작업 상태 변경 실패:', err);
           toast({
             title: '하위 작업 업데이트 실패',
             description: err.message,
@@ -689,23 +670,34 @@ export function KanbanBoard() {
                                                 {subtasks.map((subtask) => (
                                                   <div
                                                     key={subtask.id}
-                                                    className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors"
+                                                    className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
+                                                    onClick={() =>
+                                                      toggleSubtaskCompletion(
+                                                        subtask.id as number,
+                                                        (subtask as any).status,
+                                                        subtask.text ?? '이름 없는 하위 작업',
+                                                        task.id as number
+                                                      )
+                                                    }
                                                   >
                                                     <Checkbox
                                                       checked={(subtask as any).status === 'DONE'}
-                                                      onCheckedChange={() =>
+                                                      onCheckedChange={(checked) => {
+                                                        // onClick 이벤트로 처리되므로 여기서는 아무것도 하지 않음
+                                                        // 하지만 체크박스 자체 클릭도 동작하도록 함
                                                         toggleSubtaskCompletion(
                                                           subtask.id as number,
                                                           (subtask as any).status,
                                                           subtask.text ?? '이름 없는 하위 작업',
                                                           task.id as number
-                                                        )
-                                                      }
+                                                        );
+                                                      }}
+                                                      onClick={(e) => e.stopPropagation()} // 중복 호출 방지
                                                       className="mt-0.5"
                                                     />
                                                     <div className="flex-1 space-y-1">
                                                       <p
-                                                        className={`text-sm ${
+                                                        className={`text-sm font-medium ${
                                                           (subtask as any).status === 'DONE'
                                                             ? 'line-through text-muted-foreground'
                                                             : ''
@@ -718,7 +710,26 @@ export function KanbanBoard() {
                                                           {(subtask as any).assignee || '미배정'}
                                                         </span>
                                                         <span>•</span>
-                                                        <span>{subtask.progress || 0}%</span>
+                                                        <span
+                                                          className={
+                                                            (subtask as any).status === 'DONE'
+                                                              ? 'text-green-600 dark:text-green-500 font-medium'
+                                                              : 'text-muted-foreground'
+                                                          }
+                                                        >
+                                                          {(subtask as any).status === 'DONE'
+                                                            ? '완료'
+                                                            : '대기중'}
+                                                        </span>
+                                                        {subtask.start && subtask.end && (
+                                                          <>
+                                                            <span>•</span>
+                                                            <span>
+                                                              {formatDate(subtask.start)} ~{' '}
+                                                              {formatDate(subtask.end)}
+                                                            </span>
+                                                          </>
+                                                        )}
                                                       </div>
                                                     </div>
                                                   </div>
@@ -787,19 +798,43 @@ export function KanbanBoard() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="task-progress">진행률 ({editingTask.progress}%)</Label>
+                <Label htmlFor="task-progress">
+                  진행률 ({editingTask.progress}%)
+                  {rawTasks.find((t) => t.id === editingTask.id)?.parent && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (하위 작업은 0% 또는 100%만 선택 가능)
+                    </span>
+                  )}
+                  {!rawTasks.find((t) => t.id === editingTask.id)?.parent &&
+                    rawTasks.some((t) => t.parent === editingTask.id) && (
+                      <span className="ml-2 text-xs text-amber-600">
+                        (하위 작업이 있어 자동 계산됨)
+                      </span>
+                    )}
+                </Label>
                 <div className="flex items-center gap-4">
                   <Input
                     id="task-progress"
                     type="range"
                     min="0"
                     max="100"
+                    step={rawTasks.find((t) => t.id === editingTask.id)?.parent ? 100 : 1}
                     value={editingTask.progress}
-                    onChange={(e) =>
-                      setEditingTask((prev) =>
-                        prev ? { ...prev, progress: Number(e.target.value) } : null
-                      )
+                    disabled={
+                      !rawTasks.find((t) => t.id === editingTask.id)?.parent &&
+                      rawTasks.some((t) => t.parent === editingTask.id)
                     }
+                    onChange={(e) => {
+                      let newProgress = Number(e.target.value);
+
+                      // 하위 작업의 경우 0 또는 100으로 스냅
+                      const isSubtask = rawTasks.find((t) => t.id === editingTask.id)?.parent;
+                      if (isSubtask) {
+                        newProgress = newProgress >= 50 ? 100 : 0;
+                      }
+
+                      setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
+                    }}
                     className="flex-1"
                   />
                   <Input
@@ -807,11 +842,26 @@ export function KanbanBoard() {
                     min="0"
                     max="100"
                     value={editingTask.progress}
-                    onChange={(e) =>
-                      setEditingTask((prev) =>
-                        prev ? { ...prev, progress: Number(e.target.value) } : null
-                      )
+                    disabled={
+                      !rawTasks.find((t) => t.id === editingTask.id)?.parent &&
+                      rawTasks.some((t) => t.parent === editingTask.id)
                     }
+                    onChange={(e) => {
+                      let newProgress = Number(e.target.value);
+
+                      // 하위 작업의 경우 0 또는 100만 허용
+                      const isSubtask = rawTasks.find((t) => t.id === editingTask.id)?.parent;
+                      if (isSubtask && newProgress !== 0 && newProgress !== 100) {
+                        toast({
+                          title: '하위 작업 진행률 제한',
+                          description: '하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
+
+                      setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
+                    }}
                     className="w-20"
                   />
                 </div>

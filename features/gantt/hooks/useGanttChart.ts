@@ -2,9 +2,9 @@ import { gantt } from 'dhtmlx-gantt';
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 import {
+  dayViewScales,
   ganttBaseConfig,
   ganttColumns,
-  dayViewScales,
   monthViewScales,
 } from '../config/ganttConfig';
 import type { DhtmlxTask } from '../utils/ganttTransformers';
@@ -49,6 +49,24 @@ export function useGanttChart(
     gantt.locale.labels.section_description = '작업명';
     gantt.locale.labels.section_assignee_email = '담당자 이메일';
     gantt.locale.labels.section_time = '기간';
+
+    // 상태별 태스크 색상 설정
+    gantt.templates.task_class = function (start, end, task: any) {
+      // task의 progress 값을 기반으로 상태 판단
+      const progress = Math.round((task.progress || 0) * 100);
+
+      let className = '';
+      if (progress === 0) {
+        className = 'gantt-task-todo'; // 회색
+      } else if (progress === 100) {
+        className = 'gantt-task-done'; // 초록색
+      } else {
+        className = 'gantt-task-in-progress'; // 파란색
+      }
+
+      console.log(`[Gantt] Task "${task.text}": progress=${progress}%, class=${className}`);
+      return className;
+    };
 
     // Gantt 초기화 및 데이터 로드
     gantt.init(containerRef.current);

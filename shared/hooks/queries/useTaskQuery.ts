@@ -1,6 +1,7 @@
 import { createTask, deleteTask, fetchTasks, updateTask } from '@/shared/api/taskApi';
 import type { CreateTaskDto, TaskFlatDto, UpdateTaskDto } from '@/shared/api/taskTypes';
 import { useToast } from '@/shared/hooks/useToast';
+import { getStatusFromProgress } from '@/shared/utils/taskStatusUtils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // ===== 조회 훅 =====
@@ -69,15 +70,109 @@ export const useCreateTask = (projectId: string) => {
 };
 
 /**
- * 작업 수정 mutation
+ * 작업 수정 mutation (상위 작업 진행률 자동 업데이트 포함)
  */
 export const useUpdateTask = (projectId: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ taskId, updates }: { taskId: number; updates: UpdateTaskDto }) =>
-      updateTask(taskId, updates),
+    mutationFn: async ({ taskId, updates }: { taskId: number; updates: UpdateTaskDto }) => {
+      console.log('🔄 [TaskUpdate] 시작:', { taskId, updates });
+
+      // 0. 캐시에서 전체 태스크 목록 가져오기 (검증용)
+      const cachedTasks = queryClient.getQueryData<TaskFlatDto[]>(['tasks', projectId]);
+      const targetTask = cachedTasks?.find((t) => t.id === taskId);
+
+      // 0-1. 하위 작업의 진행률 검증 (0 또는 100만 허용)
+      if (targetTask?.parent && updates.progress !== undefined) {
+        if (updates.progress !== 0 && updates.progress !== 100) {
+          toast({
+            title: '하위 작업 진행률 제한',
+            description: '하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.',
+            variant: 'destructive',
+          });
+          throw new Error('하위 작업은 0% 또는 100%의 진행률만 허용됩니다.');
+        }
+      }
+
+      // 0-2. 상위 작업의 진행률 수동 변경 차단 (하위 작업이 있는 경우)
+      if (!targetTask?.parent && updates.progress !== undefined && cachedTasks) {
+        const hasSubtasks = cachedTasks.some((t) => t.parent === taskId);
+        if (hasSubtasks) {
+          toast({
+            title: '상위 작업 진행률 제한',
+            description:
+              '하위 작업이 있는 상위 작업의 진행률은 자동으로 계산됩니다. 하위 작업을 수정하세요.',
+            variant: 'destructive',
+          });
+          throw new Error('하위 작업이 있는 상위 작업의 진행률은 자동으로 계산됩니다.');
+        }
+      }
+
+      // 1. 태스크 업데이트
+      const updatedTask = await updateTask(taskId, updates);
+      console.log('✅ [TaskUpdate] 업데이트 완료:', updatedTask);
+
+      // 2. 캐시 다시 가져오기 (최신 데이터)
+      const refreshedCachedTasks = queryClient.getQueryData<TaskFlatDto[]>(['tasks', projectId]);
+      console.log('📦 [TaskUpdate] 캐시 태스크 목록:', {
+        총개수: refreshedCachedTasks?.length,
+        updatedTaskParent: updatedTask.parent,
+      });
+
+      if (refreshedCachedTasks && updatedTask.parent) {
+        // 3. 동일한 부모를 가진 모든 하위 태스크 찾기
+        const siblings = refreshedCachedTasks.filter((task) => task.parent === updatedTask.parent);
+        console.log('👥 [TaskUpdate] 형제 태스크 찾기:', {
+          parentId: updatedTask.parent,
+          siblingsCount: siblings.length,
+          siblings: siblings.map((s) => ({ id: s.id, name: s.name, progress: s.progress })),
+        });
+
+        // 4. 업데이트된 태스크를 포함하여 진행률 계산
+        const updatedSiblings = siblings.map((sibling) =>
+          sibling.id === updatedTask.id ? updatedTask : sibling
+        );
+
+        console.log('🔄 [TaskUpdate] 업데이트된 형제 목록:', {
+          siblings: updatedSiblings.map((s) => ({ id: s.id, name: s.name, progress: s.progress })),
+        });
+
+        // 5. 모든 하위 태스크의 진행률 평균 계산
+        const totalProgress = updatedSiblings.reduce((sum, task) => sum + task.progress, 0);
+        const parentProgress = Math.round(totalProgress / updatedSiblings.length);
+
+        // 6. 진행률에 따른 상태 계산
+        const parentStatus = getStatusFromProgress(parentProgress);
+
+        console.log('📊 [TaskUpdate] 상위 태스크 계산 결과:', {
+          parentId: updatedTask.parent,
+          totalProgress,
+          siblingsCount: updatedSiblings.length,
+          parentProgress,
+          parentStatus,
+        });
+
+        // 7. 상위 태스크의 진행률과 상태 업데이트
+        try {
+          await updateTask(updatedTask.parent, {
+            progress: parentProgress,
+            status: parentStatus,
+          });
+          console.log('✅ [TaskUpdate] 상위 태스크 업데이트 완료');
+        } catch (error) {
+          console.error('❌ [TaskUpdate] 상위 태스크 업데이트 실패:', error);
+        }
+      } else {
+        console.log('ℹ️ [TaskUpdate] 상위 태스크 업데이트 스킵:', {
+          hasCachedTasks: !!refreshedCachedTasks,
+          hasParent: !!updatedTask.parent,
+        });
+      }
+
+      return updatedTask;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['projectWithTasks', projectId] });
