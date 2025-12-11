@@ -13,9 +13,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Label } from '@/shared/ui/label';
 import { Progress } from '@/shared/ui/progress';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
@@ -36,6 +34,7 @@ import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { useKanbanExpansion } from '../hooks/useKanbanExpansion';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
 import { getSubtasks, groupTasksByStatus } from '../utils/kanbanTransformers';
+import { KanbanEditDialog, type EditingTask } from './KanbanEditDialog';
 
 export function KanbanBoard() {
   const params = useParams();
@@ -58,15 +57,7 @@ export function KanbanBoard() {
   });
 
   // 작업 수정을 위한 state
-  const [editingTask, setEditingTask] = useState<{
-    id: number;
-    name: string;
-    progress: number;
-    startDate: string;
-    endDate: string;
-    assigneeName: string; // 담당자 이름 (읽기 전용 표시용)
-    assigneeEmail: string; // 담당자 이메일 (수정 가능)
-  } | null>(null);
+  const [editingTask, setEditingTask] = useState<EditingTask | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // API에서 원본 데이터를 가져와서 SVAR 형식으로 변환
@@ -679,129 +670,15 @@ export function KanbanBoard() {
       </DragDropContext>
 
       {/* 작업 수정 다이얼로그 */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>작업 수정</DialogTitle>
-          </DialogHeader>
-          {editingTask && (
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="task-name">작업 이름</Label>
-                <Input
-                  id="task-name"
-                  value={editingTask.name}
-                  onChange={(e) =>
-                    setEditingTask((prev) => (prev ? { ...prev, name: e.target.value } : null))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="assignee-name">담당자</Label>
-                <Input
-                  id="assignee-name"
-                  value={editingTask.assigneeName}
-                  disabled
-                  className="bg-muted cursor-not-allowed"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="assignee-email">담당자 이메일</Label>
-                <Input
-                  id="assignee-email"
-                  type="email"
-                  placeholder="example@email.com"
-                  value={editingTask.assigneeEmail}
-                  onChange={(e) =>
-                    setEditingTask((prev) =>
-                      prev ? { ...prev, assigneeEmail: e.target.value } : null
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="task-progress">
-                  진행률 ({editingTask.progress}%)
-                  {!rawTasks.find((t) => t.id === editingTask.id)?.parent &&
-                    rawTasks.some((t) => t.parent === editingTask.id) && (
-                      <span className="ml-2 text-xs text-amber-600">
-                        (하위 작업이 있어 자동 계산됨)
-                      </span>
-                    )}
-                </Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    id="task-progress"
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={editingTask.progress}
-                    disabled={
-                      !rawTasks.find((t) => t.id === editingTask.id)?.parent &&
-                      rawTasks.some((t) => t.parent === editingTask.id)
-                    }
-                    onChange={(e) => {
-                      const newProgress = Number(e.target.value);
-                      setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
-                    }}
-                    className="flex-1"
-                  />
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={editingTask.progress}
-                    disabled={
-                      !rawTasks.find((t) => t.id === editingTask.id)?.parent &&
-                      rawTasks.some((t) => t.parent === editingTask.id)
-                    }
-                    onChange={(e) => {
-                      const newProgress = Number(e.target.value);
-                      setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
-                    }}
-                    className="w-20"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start-date">시작일</Label>
-                  <Input
-                    id="start-date"
-                    type="date"
-                    value={editingTask.startDate}
-                    onChange={(e) =>
-                      setEditingTask((prev) =>
-                        prev ? { ...prev, startDate: e.target.value } : null
-                      )
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end-date">종료일</Label>
-                  <Input
-                    id="end-date"
-                    type="date"
-                    value={editingTask.endDate}
-                    onChange={(e) =>
-                      setEditingTask((prev) => (prev ? { ...prev, endDate: e.target.value } : null))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleEditTask} disabled={updateTaskMutation.isPending}>
-              저장
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <KanbanEditDialog
+        isOpen={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        editingTask={editingTask}
+        setEditingTask={setEditingTask}
+        onSave={handleEditTask}
+        isSaving={updateTaskMutation.isPending}
+        rawTasks={rawTasks}
+      />
     </div>
   );
 }
