@@ -33,69 +33,8 @@ import {
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
-
-interface KanbanColumn {
-  id: 'todo' | 'in-progress' | 'done';
-  title: string;
-  color: string;
-}
-
-// API status를 칸반 컬럼 ID로 변환
-const apiStatusToKanban = (status: string): 'todo' | 'in-progress' | 'done' => {
-  const mapping: Record<string, 'todo' | 'in-progress' | 'done'> = {
-    TODO: 'todo',
-    IN_PROGRESS: 'in-progress',
-    DONE: 'done',
-  };
-  return mapping[status] || 'todo';
-};
-
-// 칸반 컬럼 ID를 API status로 변환
-const kanbanToApiStatus = (kanban: 'todo' | 'in-progress' | 'done'): string => {
-  const mapping: Record<'todo' | 'in-progress' | 'done', string> = {
-    todo: 'TODO',
-    'in-progress': 'IN_PROGRESS',
-    done: 'DONE',
-  };
-  return mapping[kanban];
-};
-
-// SVAR Task 배열을 칸반 컬럼별로 그룹화 (최상위 작업만)
-const groupTasksByStatus = (tasks: SvarTask[]) => {
-  // parent가 없는 최상위 작업만 사용
-  const topLevelTasks = tasks.filter((t) => !t.parent);
-
-  return {
-    todo: topLevelTasks.filter((t) => apiStatusToKanban((t as any).status) === 'todo'),
-    'in-progress': topLevelTasks.filter(
-      (t) => apiStatusToKanban((t as any).status) === 'in-progress'
-    ),
-    done: topLevelTasks.filter((t) => apiStatusToKanban((t as any).status) === 'done'),
-  };
-};
-
-// 특정 작업의 하위 작업 찾기
-const getSubtasks = (tasks: SvarTask[], parentId: number | string): SvarTask[] => {
-  return tasks.filter((t) => t.parent === parentId);
-};
-
-const columns: KanbanColumn[] = [
-  {
-    id: 'todo',
-    title: '할 일',
-    color: 'bg-slate-100 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50',
-  },
-  {
-    id: 'in-progress',
-    title: '진행 중',
-    color: 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30',
-  },
-  {
-    id: 'done',
-    title: '완료',
-    color: 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30',
-  },
-];
+import { getSubtasks, groupTasksByStatus, kanbanToApiStatus } from '../utils/kanbanTransformers';
+import { STATUS_BY_COLUMN, PROGRESS_BY_COLUMN, kanbanColumns } from '../config/kanbanConfig';
 
 export function KanbanBoard() {
   const params = useParams();
@@ -324,25 +263,13 @@ export function KanbanBoard() {
       return;
     }
 
-    // 상태에 따른 기본값
-    const statusMapping: Record<'todo' | 'in-progress' | 'done', string> = {
-      todo: 'TODO',
-      'in-progress': 'IN_PROGRESS',
-      done: 'DONE',
-    };
-    const progressMapping: Record<'todo' | 'in-progress' | 'done', number> = {
-      todo: 0,
-      'in-progress': 50,
-      done: 100,
-    };
-
     // 오늘 날짜 (duration=1이 되도록 시작일과 종료일을 같게 설정)
     const today = new Date();
 
     const taskData: CreateTaskDto = {
       name: taskName,
-      status: statusMapping[columnId],
-      progress: progressMapping[columnId],
+      status: STATUS_BY_COLUMN[columnId],
+      progress: PROGRESS_BY_COLUMN[columnId],
       startDate: today.toISOString().split('T')[0],
       endDate: today.toISOString().split('T')[0], // duration=1이 되도록 시작일과 같게 설정
       // API 스펙상 assigneeId(number)가 필요하지만, 현재 사용자 목록이 없으므로
@@ -533,7 +460,7 @@ export function KanbanBoard() {
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {columns.map((column) => {
+          {kanbanColumns.map((column) => {
             const columnTasks = kanbanTasks[column.id];
 
             return (
