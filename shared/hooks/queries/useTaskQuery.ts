@@ -80,24 +80,18 @@ export const useUpdateTask = (projectId: string) => {
     mutationFn: async ({ taskId, updates }: { taskId: number; updates: UpdateTaskDto }) => {
       console.log('🔄 [TaskUpdate] 시작:', { taskId, updates });
 
-      // 0. 캐시에서 전체 태스크 목록 가져오기 (검증용)
+      // 0. 캐시에서 전체 태스크 목록 가져오기
       const cachedTasks = queryClient.getQueryData<TaskFlatDto[]>(['tasks', projectId]);
-      const targetTask = cachedTasks?.find((t) => t.id === taskId);
 
-      // 0-1. 하위 작업의 진행률 검증 (0 또는 100만 허용)
-      if (targetTask?.parent && updates.progress !== undefined) {
-        if (updates.progress !== 0 && updates.progress !== 100) {
-          toast({
-            title: '하위 작업 진행률 제한',
-            description: '하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.',
-            variant: 'destructive',
-          });
-          throw new Error('하위 작업은 0% 또는 100%의 진행률만 허용됩니다.');
-        }
-      }
+      // ✅ Level 1 개선: 하위 작업도 0-100% 자유롭게 설정 가능
+      // 진행률 제한 검증 제거 - 모든 작업이 동일하게 0-100% 사용 가능
 
-      // 0-2. 상위 작업의 진행률 수동 변경 차단 (하위 작업이 있는 경우)
-      if (!targetTask?.parent && updates.progress !== undefined && cachedTasks) {
+      // 상위 작업의 진행률 수동 변경 차단 (하위 작업이 있는 경우)
+      if (
+        !cachedTasks?.find((t) => t.id === taskId)?.parent &&
+        updates.progress !== undefined &&
+        cachedTasks
+      ) {
         const hasSubtasks = cachedTasks.some((t) => t.parent === taskId);
         if (hasSubtasks) {
           toast({

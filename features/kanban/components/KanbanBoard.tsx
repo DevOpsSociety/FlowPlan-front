@@ -13,16 +13,23 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
-import { Checkbox } from '@/shared/ui/checkbox';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { Progress } from '@/shared/ui/progress';
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import { Calendar, Clock, ListChecks, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
@@ -117,9 +124,13 @@ export function KanbanBoard() {
     progress: number;
     startDate: string;
     endDate: string;
-    assigneeEmail: string;
+    assigneeName: string; // 담당자 이름 (읽기 전용 표시용)
+    assigneeEmail: string; // 담당자 이메일 (수정 가능)
   } | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // ✅ 계층형 칸반: 접기/펼치기 상태 관리
+  const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
 
   // API에서 원본 데이터를 가져와서 SVAR 형식으로 변환
   const { data: rawTasks = [], isLoading, error, refetch } = useTasks(projectId);
@@ -133,16 +144,20 @@ export function KanbanBoard() {
   // 칸반 컬럼별로 그룹화
   const kanbanTasks = groupTasksByStatus(tasks);
 
-  // 하위 작업 기반 진행률 계산
-  const calculateProgressFromSubtasks = (subtasks: SvarTask[]): number => {
-    if (subtasks.length === 0) return 0;
-
-    const completedCount = subtasks.filter((s) => (s as any).status === 'DONE').length;
-
-    return Math.round((completedCount / subtasks.length) * 100);
+  // ✅ 계층형 칸반: 접기/펼치기 토글
+  const toggleTaskExpansion = (taskId: number) => {
+    setExpandedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
   };
 
-  // 드래그앤드롭 핸들러
+  // ✅ 계층형 칸반: 드래그앤드롭 핸들러 (부모-자식 함께 이동)
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -158,34 +173,133 @@ export function KanbanBoard() {
     const newKanbanStatus = destination.droppableId as 'todo' | 'in-progress' | 'done';
     const newApiStatus = kanbanToApiStatus(newKanbanStatus);
 
-    // 하위 작업을 고려한 진행률 계산
-    const taskId = Number(draggableId);
-    const subtasks = getSubtasks(tasks, taskId);
-    let newProgress: number;
+    // draggableId에서 타입과 실제 ID 추출
+    const [taskType, taskIdStr] = draggableId.split('-');
+    const taskId = Number(taskIdStr);
+    const isSubtask = taskType === 'subtask';
 
-    if (newKanbanStatus === 'done') {
-      newProgress = 100;
-    } else if (newKanbanStatus === 'todo') {
-      newProgress = 0;
-    } else if (newKanbanStatus === 'in-progress') {
-      // 하위 작업이 있으면 하위 작업 기반 계산, 없으면 1로 설정 (시작됨 의미)
-      if (subtasks.length > 0) {
-        newProgress = calculateProgressFromSubtasks(subtasks);
+    // 부모 작업인 경우: 모든 자식도 함께 이동
+    if (!isSubtask) {
+      const subtasks = getSubtasks(tasks, taskId);
+      const hasSubtasks = subtasks.length > 0;
+
+      if (hasSubtasks) {
+        // ✅ 모든 자식 작업의 새 진행률을 미리 계산
+        let totalNewProgress = 0;
+        subtasks.forEach((subtask) => {
+          let newProgress: number;
+          if (newKanbanStatus === 'done') {
+            newProgress = 100;
+          } else if (newKanbanStatus === 'todo') {
+            newProgress = 0;
+          } else {
+            // in-progress: 0 또는 100이면 1로, 그 외는 유지
+            const currentProgress = subtask.progress || 0;
+            if (currentProgress === 0 || currentProgress === 100) {
+              newProgress = 1;
+            } else {
+              newProgress = currentProgress;
+            }
+          }
+          totalNewProgress += newProgress;
+        });
+
+        // 부모의 새 진행률 = 자식들의 평균
+        const parentNewProgress = Math.round(totalNewProgress / subtasks.length);
+
+        // 부모 작업 업데이트 (상태 + 계산된 진행률)
+        updateTaskMutation.mutate({
+          taskId,
+          updates: {
+            status: newApiStatus,
+            progress: parentNewProgress,
+          },
+        });
+
+        // 모든 자식 작업도 같은 상태로 업데이트
+        subtasks.forEach((subtask) => {
+          let newProgress: number;
+          if (newKanbanStatus === 'done') {
+            newProgress = 100;
+          } else if (newKanbanStatus === 'todo') {
+            newProgress = 0;
+          } else {
+            // in-progress: 0 또는 100이면 1로, 그 외는 유지
+            const currentProgress = subtask.progress || 0;
+            if (currentProgress === 0 || currentProgress === 100) {
+              newProgress = 1;
+            } else {
+              newProgress = currentProgress;
+            }
+          }
+
+          updateTaskMutation.mutate({
+            taskId: Number(subtask.id),
+            updates: {
+              status: newApiStatus,
+              progress: newProgress,
+            },
+          });
+        });
+
+        toast({
+          title: '작업 상태 변경',
+          description: `${subtasks.length}개의 하위 작업도 함께 이동되었습니다.`,
+        });
       } else {
-        newProgress = 1;
+        // 하위 작업이 없는 부모: 진행률도 함께 변경
+        const task = tasks.find((t) => t.id === taskId);
+        const currentProgress = task?.progress || 0;
+
+        let newProgress: number;
+        if (newKanbanStatus === 'done') {
+          newProgress = 100;
+        } else if (newKanbanStatus === 'todo') {
+          newProgress = 0;
+        } else {
+          // in-progress: 0 또는 100이면 1로, 그 외는 유지
+          if (currentProgress === 0 || currentProgress === 100) {
+            newProgress = 1;
+          } else {
+            newProgress = currentProgress;
+          }
+        }
+
+        updateTaskMutation.mutate({
+          taskId,
+          updates: {
+            status: newApiStatus,
+            progress: newProgress,
+          },
+        });
       }
     } else {
-      newProgress = 0;
-    }
+      // 자식 작업인 경우: 자식만 독립적으로 이동
+      const task = tasks.find((t) => t.id === taskId);
+      const currentProgress = task?.progress || 0;
 
-    // API 업데이트 (자동 저장)
-    updateTaskMutation.mutate({
-      taskId: Number(draggableId),
-      updates: {
-        status: newApiStatus,
-        progress: newProgress,
-      },
-    });
+      let newProgress: number;
+      if (newKanbanStatus === 'done') {
+        newProgress = 100;
+      } else if (newKanbanStatus === 'todo') {
+        newProgress = 0;
+      } else {
+        // in-progress: 0 또는 100이면 1로, 그 외는 유지
+        if (currentProgress === 0 || currentProgress === 100) {
+          newProgress = 1;
+        } else {
+          newProgress = currentProgress;
+        }
+      }
+
+      updateTaskMutation.mutate({
+        taskId,
+        updates: {
+          status: newApiStatus,
+          progress: newProgress,
+        },
+      });
+    }
   };
 
   // 데이터 새로고침
@@ -255,29 +369,79 @@ export function KanbanBoard() {
     }
   };
 
-  // 작업 수정 핸들러
+  // 작업 수정 핸들러 - 변경된 필드만 전송
   const handleEditTask = () => {
     if (!editingTask) return;
 
-    // 진행률에 따른 상태 결정
-    let newStatus = 'TODO';
-    if (editingTask.progress === 100) {
-      newStatus = 'DONE';
-    } else if (editingTask.progress > 0) {
-      newStatus = 'IN_PROGRESS';
+    // 원본 task 찾기
+    const originalTask = tasks.find((t) => t.id === editingTask.id);
+    if (!originalTask) {
+      console.warn('⚠️ Original task not found for:', editingTask.id);
+      return;
     }
+
+    // ✅ Level 1 개선: 하위 작업도 0-100% 자유롭게 설정 가능
+    // 진행률 검증 제거
+
+    // 변경된 필드만 추출
+    const updates: any = {};
+
+    // 1. 작업명 비교
+    if (editingTask.name !== (originalTask.text || '')) {
+      updates.name = editingTask.name;
+    }
+
+    // 2. 진행률 비교
+    const originalProgress = originalTask.progress || 0; // 이미 0-100 범위
+    if (editingTask.progress !== originalProgress) {
+      updates.progress = editingTask.progress;
+
+      // 진행률에 따른 상태 결정
+      let newStatus = 'TODO';
+      if (editingTask.progress === 100) {
+        newStatus = 'DONE';
+      } else if (editingTask.progress > 0) {
+        newStatus = 'IN_PROGRESS';
+      }
+      updates.status = newStatus;
+    }
+
+    // 3. 시작일 비교
+    const originalStartDate = originalTask.start
+      ? originalTask.start.toISOString().split('T')[0]
+      : '';
+    if (editingTask.startDate !== originalStartDate) {
+      updates.startDate = editingTask.startDate;
+    }
+
+    // 4. 종료일 비교
+    const originalEndDate = originalTask.end ? originalTask.end.toISOString().split('T')[0] : '';
+    if (editingTask.endDate !== originalEndDate) {
+      updates.endDate = editingTask.endDate;
+    }
+
+    // 5. 담당자 이메일 비교
+    const originalEmail = (originalTask as any).assigneeEmail || '';
+    if (editingTask.assigneeEmail !== originalEmail) {
+      if (editingTask.assigneeEmail) {
+        updates.assigneeEmail = editingTask.assigneeEmail;
+      }
+    }
+
+    // 변경된 필드가 없으면 API 호출 안 함
+    if (Object.keys(updates).length === 0) {
+      console.log('✅ [Kanban] No changes detected, closing dialog');
+      setIsEditOpen(false);
+      setEditingTask(null);
+      return;
+    }
+
+    console.log('📤 [Kanban] Sending only changed fields:', updates);
 
     updateTaskMutation.mutate(
       {
         taskId: editingTask.id,
-        updates: {
-          name: editingTask.name,
-          progress: editingTask.progress,
-          status: newStatus, // 상태 업데이트 추가
-          startDate: editingTask.startDate,
-          endDate: editingTask.endDate,
-          assigneeEmail: editingTask.assigneeEmail || undefined,
-        },
+        updates,
       },
       {
         onSuccess: () => {
@@ -295,61 +459,13 @@ export function KanbanBoard() {
     setEditingTask({
       id: Number(task.id),
       name: task.text || '',
-      progress: task.progress || 0,
+      progress: task.progress || 0, // 이미 0-100 범위 (API에서 int32)
       startDate: task.start ? task.start.toISOString().split('T')[0] : '',
       endDate: task.end ? task.end.toISOString().split('T')[0] : '',
-      assigneeEmail: '',
+      assigneeName: (task as any).assigneeName || '', // 담당자 이름 (읽기 전용)
+      assigneeEmail: (task as any).assigneeEmail || '', // 담당자 이메일 (수정 가능)
     });
     setIsEditOpen(true);
-  };
-
-  // 하위 작업 완료 상태 토글 (API 연동)
-  const toggleSubtaskCompletion = (
-    subtaskId: number,
-    currentStatus: string,
-    subtaskName: string,
-    parentTaskId: number
-  ) => {
-    const newStatus = currentStatus === 'DONE' ? 'TODO' : 'DONE';
-    const newProgress = newStatus === 'DONE' ? 100 : 0;
-
-    console.log('📝 [Kanban] 하위 작업 상태 변경:', {
-      subtaskId,
-      subtaskName,
-      oldStatus: currentStatus,
-      newStatus,
-      newProgress,
-      parentTaskId,
-    });
-
-    // 하위 작업 업데이트 - useUpdateTask 훅이 자동으로 상위 작업도 업데이트함
-    updateTaskMutation.mutate(
-      {
-        taskId: subtaskId,
-        updates: {
-          status: newStatus,
-          progress: newProgress,
-        },
-      },
-      {
-        onSuccess: () => {
-          console.log('✅ [Kanban] 하위 작업 상태 변경 성공 (상위 작업은 자동 업데이트됨):', {
-            subtaskId,
-            subtaskName,
-            newStatus,
-            parentTaskId,
-          });
-        },
-        onError: (err) => {
-          console.error('❌ [Kanban] 하위 작업 상태 변경 실패:', err);
-          toast({
-            title: '하위 작업 업데이트 실패',
-            description: err.message,
-            variant: 'destructive',
-          });
-        },
-      }
-    );
   };
 
   const getAssigneeInitials = (name: string) => {
@@ -364,16 +480,6 @@ export function KanbanBoard() {
   const formatDate = (date: Date | undefined) => {
     if (!date) return '-';
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-  };
-
-  // 하위 작업 상태 아이콘 생성
-  const getSubtaskStatusIcons = (subtasks: SvarTask[]) => {
-    return subtasks.map((subtask) => {
-      const progress = subtask.progress || 0;
-      if (progress === 100) return '●'; // 완료
-      if (progress > 0) return '◐'; // 진행중
-      return '○'; // 미완료
-    });
   };
 
   // 로딩 상태
@@ -531,219 +637,249 @@ export function KanbanBoard() {
                         </div>
                       )}
 
-                      {/* 작업 카드들 */}
+                      {/* ✅ 계층형 칸반: 부모 + 자식 작업 카드들 */}
                       <div className="space-y-3">
                         {columnTasks.map((task: SvarTask, index: number) => {
                           const subtasks = getSubtasks(tasks, task.id);
+                          const hasSubtasks = subtasks.length > 0;
+                          const isExpanded = expandedTasks.has(Number(task.id));
 
                           return (
-                            <Draggable
-                              key={`${column.id}-${task.id}`}
-                              draggableId={String(task.id)}
-                              index={index}
-                            >
-                              {(dragProvided, dragSnapshot) => (
-                                <div
-                                  ref={dragProvided.innerRef}
-                                  {...dragProvided.draggableProps}
-                                  {...dragProvided.dragHandleProps}
-                                >
-                                  <Card
-                                    className={`cursor-pointer hover:shadow-md transition-shadow bg-background ${
-                                      dragSnapshot.isDragging ? 'shadow-lg rotate-2' : ''
-                                    }`}
+                            <div key={`task-group-${task.id}`} className="space-y-2">
+                              {/* 부모 작업 카드 */}
+                              <Draggable
+                                key={`parent-${task.id}`}
+                                draggableId={`parent-${task.id}`}
+                                index={index}
+                              >
+                                {(dragProvided, dragSnapshot) => (
+                                  <div
+                                    ref={dragProvided.innerRef}
+                                    {...dragProvided.draggableProps}
+                                    {...dragProvided.dragHandleProps}
                                   >
-                                    <CardHeader className="pb-2">
-                                      <div className="flex items-start justify-between">
-                                        <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
-                                          {task.text}
-                                        </h5>
-                                        <div className="flex gap-1">
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0 hover:bg-muted"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              openEditDialog(task);
-                                            }}
-                                          >
-                                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0 hover:bg-destructive/10"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteTask(
-                                                task.id as number,
-                                                task.text ?? '이름 없는 작업'
-                                              );
-                                            }}
-                                          >
-                                            <Trash2 className="h-3 w-3 text-destructive" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0 space-y-3">
-                                      {/* 진행률 */}
-                                      <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                          <span className="text-xs text-muted-foreground">
-                                            진행률
-                                          </span>
-                                          <span className="text-xs font-medium">
-                                            {task.progress || 0}%
-                                          </span>
-                                        </div>
-                                        <Progress value={task.progress || 0} className="h-1.5" />
-                                      </div>
-
-                                      {/* 담당자 */}
-                                      {(task as any).assignee && (
-                                        <div className="flex items-center space-x-2">
-                                          <Avatar className="h-6 w-6">
-                                            <AvatarFallback className="text-xs">
-                                              {getAssigneeInitials((task as any).assignee)}
-                                            </AvatarFallback>
-                                          </Avatar>
-                                          <span className="text-xs text-muted-foreground">
-                                            {(task as any).assignee}
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {/* 날짜 정보 */}
-                                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <div className="flex items-center space-x-1">
-                                          <Calendar className="h-3 w-3" />
-                                          <span>
-                                            {formatDate(task.start)}
-                                            {task.end && ` ~ ${formatDate(task.end)}`}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                          <Clock className="h-3 w-3" />
-                                          <span>{task.duration}일</span>
-                                        </div>
-                                      </div>
-
-                                      {/* 하위 작업 체크리스트 (Popover) - API 연동 */}
-                                      {subtasks.length > 0 && (
-                                        <div className="pt-2 border-t border-border">
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <button
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="flex items-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                              >
-                                                <ListChecks className="h-3.5 w-3.5" />
-                                                <span>
-                                                  {
-                                                    subtasks.filter(
-                                                      (s) => (s.progress || 0) === 100
-                                                    ).length
-                                                  }
-                                                  /{subtasks.length} 완료
-                                                </span>
-                                                <span className="flex gap-0.5 ml-auto">
-                                                  {getSubtaskStatusIcons(subtasks).map(
-                                                    (icon, idx) => (
-                                                      <span key={idx} className="text-xs">
-                                                        {icon}
-                                                      </span>
-                                                    )
-                                                  )}
-                                                </span>
-                                              </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                              className="w-80 p-3"
-                                              onClick={(e) => e.stopPropagation()}
+                                    <Card
+                                      className={`cursor-pointer hover:shadow-md transition-shadow bg-background ${
+                                        dragSnapshot.isDragging ? 'shadow-lg rotate-2' : ''
+                                      }`}
+                                    >
+                                      <CardHeader className="pb-2">
+                                        <div className="flex items-start justify-between">
+                                          <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
+                                            {task.text}
+                                          </h5>
+                                          <div className="flex gap-1">
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 w-6 p-0 hover:bg-muted"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                openEditDialog(task);
+                                              }}
                                             >
-                                              <div className="space-y-2">
-                                                <h6 className="font-medium text-sm mb-3">
-                                                  하위 작업
-                                                </h6>
-                                                {subtasks.map((subtask) => (
-                                                  <div
-                                                    key={subtask.id}
-                                                    className="flex items-start gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer"
-                                                    onClick={() =>
-                                                      toggleSubtaskCompletion(
-                                                        subtask.id as number,
-                                                        (subtask as any).status,
-                                                        subtask.text ?? '이름 없는 하위 작업',
-                                                        task.id as number
-                                                      )
-                                                    }
+                                              <Pencil className="h-3 w-3 text-muted-foreground" />
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 w-6 p-0 hover:bg-destructive/10"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteTask(
+                                                  task.id as number,
+                                                  task.text ?? '이름 없는 작업'
+                                                );
+                                              }}
+                                            >
+                                              <Trash2 className="h-3 w-3 text-destructive" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </CardHeader>
+                                      <CardContent className="pt-0 space-y-3">
+                                        {/* 진행률 */}
+                                        <div>
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs text-muted-foreground">
+                                              진행률
+                                            </span>
+                                            <span className="text-xs font-medium">
+                                              {task.progress || 0}%
+                                            </span>
+                                          </div>
+                                          <Progress value={task.progress || 0} className="h-1.5" />
+                                        </div>
+
+                                        {/* 담당자 */}
+                                        {(task as any).assigneeName && (
+                                          <div className="flex items-center space-x-2">
+                                            <Avatar className="h-6 w-6">
+                                              <AvatarFallback className="text-xs">
+                                                {getAssigneeInitials((task as any).assigneeName)}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-xs text-muted-foreground">
+                                              {(task as any).assigneeName}
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {/* 날짜 정보 */}
+                                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                          <div className="flex items-center space-x-1">
+                                            <Calendar className="h-3 w-3" />
+                                            <span>
+                                              {formatDate(task.start)}
+                                              {task.end && ` ~ ${formatDate(task.end)}`}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{task.duration}일</span>
+                                          </div>
+                                        </div>
+
+                                        {/* 하위 작업 펼치기/접기 버튼 */}
+                                        {hasSubtasks && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full mt-2 h-7 text-xs hover:bg-accent"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              toggleTaskExpansion(Number(task.id));
+                                            }}
+                                          >
+                                            {isExpanded ? (
+                                              <>
+                                                <ChevronDown className="h-3 w-3 mr-1" />
+                                                하위 작업 접기 ({subtasks.length})
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ChevronRight className="h-3 w-3 mr-1" />
+                                                하위 작업 펼치기 ({subtasks.length})
+                                              </>
+                                            )}
+                                          </Button>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+                                )}
+                              </Draggable>
+
+                              {/* ✅ 하위 작업 카드들 (펼쳤을 때만 표시) */}
+                              {hasSubtasks && isExpanded && (
+                                <div className="ml-8 space-y-2">
+                                  {subtasks.map((subtask, subIndex) => (
+                                    <Draggable
+                                      key={`subtask-${subtask.id}`}
+                                      draggableId={`subtask-${subtask.id}`}
+                                      index={subIndex}
+                                    >
+                                      {(subDragProvided, subDragSnapshot) => (
+                                        <div
+                                          ref={subDragProvided.innerRef}
+                                          {...subDragProvided.draggableProps}
+                                          {...subDragProvided.dragHandleProps}
+                                        >
+                                          <Card
+                                            className={`cursor-pointer hover:shadow-md transition-shadow bg-background ${
+                                              subDragSnapshot.isDragging ? 'shadow-lg rotate-1' : ''
+                                            }`}
+                                          >
+                                            <CardHeader className="pb-2">
+                                              <div className="flex items-start justify-between">
+                                                <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">
+                                                  {subtask.text}
+                                                </h5>
+                                                <div className="flex gap-1">
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 w-6 p-0 hover:bg-muted"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      openEditDialog(subtask);
+                                                    }}
                                                   >
-                                                    <Checkbox
-                                                      checked={(subtask as any).status === 'DONE'}
-                                                      onCheckedChange={(checked) => {
-                                                        // onClick 이벤트로 처리되므로 여기서는 아무것도 하지 않음
-                                                        // 하지만 체크박스 자체 클릭도 동작하도록 함
-                                                        toggleSubtaskCompletion(
-                                                          subtask.id as number,
-                                                          (subtask as any).status,
-                                                          subtask.text ?? '이름 없는 하위 작업',
-                                                          task.id as number
-                                                        );
-                                                      }}
-                                                      onClick={(e) => e.stopPropagation()} // 중복 호출 방지
-                                                      className="mt-0.5"
-                                                    />
-                                                    <div className="flex-1 space-y-1">
-                                                      <p
-                                                        className={`text-sm font-medium ${
-                                                          (subtask as any).status === 'DONE'
-                                                            ? 'line-through text-muted-foreground'
-                                                            : ''
-                                                        }`}
-                                                      >
-                                                        {subtask.text}
-                                                      </p>
-                                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                        <span>
-                                                          {(subtask as any).assignee || '미배정'}
-                                                        </span>
-                                                        <span>•</span>
-                                                        <span
-                                                          className={
-                                                            (subtask as any).status === 'DONE'
-                                                              ? 'text-green-600 dark:text-green-500 font-medium'
-                                                              : 'text-muted-foreground'
-                                                          }
-                                                        >
-                                                          {(subtask as any).status === 'DONE'
-                                                            ? '완료'
-                                                            : '대기중'}
-                                                        </span>
-                                                        {subtask.start && subtask.end && (
-                                                          <>
-                                                            <span>•</span>
-                                                            <span>
-                                                              {formatDate(subtask.start)} ~{' '}
-                                                              {formatDate(subtask.end)}
-                                                            </span>
-                                                          </>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                ))}
+                                                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 w-6 p-0 hover:bg-destructive/10"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleDeleteTask(
+                                                        subtask.id as number,
+                                                        subtask.text ?? '이름 없는 하위 작업'
+                                                      );
+                                                    }}
+                                                  >
+                                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                                  </Button>
+                                                </div>
                                               </div>
-                                            </PopoverContent>
-                                          </Popover>
+                                            </CardHeader>
+                                            <CardContent className="pt-0 space-y-2">
+                                              {/* 진행률 */}
+                                              <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                  <span className="text-xs text-muted-foreground">
+                                                    진행률
+                                                  </span>
+                                                  <span className="text-xs font-medium">
+                                                    {subtask.progress || 0}%
+                                                  </span>
+                                                </div>
+                                                <Progress
+                                                  value={subtask.progress || 0}
+                                                  className="h-1.5"
+                                                />
+                                              </div>
+
+                                              {/* 담당자 */}
+                                              {(subtask as any).assigneeName && (
+                                                <div className="flex items-center space-x-2">
+                                                  <Avatar className="h-5 w-5">
+                                                    <AvatarFallback className="text-xs">
+                                                      {getAssigneeInitials(
+                                                        (subtask as any).assigneeName
+                                                      )}
+                                                    </AvatarFallback>
+                                                  </Avatar>
+                                                  <span className="text-xs text-muted-foreground">
+                                                    {(subtask as any).assigneeName}
+                                                  </span>
+                                                </div>
+                                              )}
+
+                                              {/* 날짜 정보 */}
+                                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <div className="flex items-center space-x-1">
+                                                  <Calendar className="h-3 w-3" />
+                                                  <span>
+                                                    {formatDate(subtask.start)}
+                                                    {subtask.end && ` ~ ${formatDate(subtask.end)}`}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                  <Clock className="h-3 w-3" />
+                                                  <span>{subtask.duration}일</span>
+                                                </div>
+                                              </div>
+                                            </CardContent>
+                                          </Card>
                                         </div>
                                       )}
-                                    </CardContent>
-                                  </Card>
+                                    </Draggable>
+                                  ))}
                                 </div>
                               )}
-                            </Draggable>
+                            </div>
                           );
                         })}
                         {provided.placeholder}
@@ -784,6 +920,15 @@ export function KanbanBoard() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="assignee-name">담당자</Label>
+                <Input
+                  id="assignee-name"
+                  value={editingTask.assigneeName}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="assignee-email">담당자 이메일</Label>
                 <Input
                   id="assignee-email"
@@ -800,11 +945,6 @@ export function KanbanBoard() {
               <div className="space-y-2">
                 <Label htmlFor="task-progress">
                   진행률 ({editingTask.progress}%)
-                  {rawTasks.find((t) => t.id === editingTask.id)?.parent && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (하위 작업은 0% 또는 100%만 선택 가능)
-                    </span>
-                  )}
                   {!rawTasks.find((t) => t.id === editingTask.id)?.parent &&
                     rawTasks.some((t) => t.parent === editingTask.id) && (
                       <span className="ml-2 text-xs text-amber-600">
@@ -818,21 +958,14 @@ export function KanbanBoard() {
                     type="range"
                     min="0"
                     max="100"
-                    step={rawTasks.find((t) => t.id === editingTask.id)?.parent ? 100 : 1}
+                    step="1"
                     value={editingTask.progress}
                     disabled={
                       !rawTasks.find((t) => t.id === editingTask.id)?.parent &&
                       rawTasks.some((t) => t.parent === editingTask.id)
                     }
                     onChange={(e) => {
-                      let newProgress = Number(e.target.value);
-
-                      // 하위 작업의 경우 0 또는 100으로 스냅
-                      const isSubtask = rawTasks.find((t) => t.id === editingTask.id)?.parent;
-                      if (isSubtask) {
-                        newProgress = newProgress >= 50 ? 100 : 0;
-                      }
-
+                      const newProgress = Number(e.target.value);
                       setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
                     }}
                     className="flex-1"
@@ -847,19 +980,7 @@ export function KanbanBoard() {
                       rawTasks.some((t) => t.parent === editingTask.id)
                     }
                     onChange={(e) => {
-                      let newProgress = Number(e.target.value);
-
-                      // 하위 작업의 경우 0 또는 100만 허용
-                      const isSubtask = rawTasks.find((t) => t.id === editingTask.id)?.parent;
-                      if (isSubtask && newProgress !== 0 && newProgress !== 100) {
-                        toast({
-                          title: '하위 작업 진행률 제한',
-                          description: '하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.',
-                          variant: 'destructive',
-                        });
-                        return;
-                      }
-
+                      const newProgress = Number(e.target.value);
                       setEditingTask((prev) => (prev ? { ...prev, progress: newProgress } : null));
                     }}
                     className="w-20"

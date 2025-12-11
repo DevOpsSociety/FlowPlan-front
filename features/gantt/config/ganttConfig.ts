@@ -12,10 +12,17 @@ export const ganttColumns = [
   { name: 'text', label: '작업명', tree: true, width: '*', resize: true },
   { name: 'start_date', label: '시작일', align: 'center', width: 100 },
   {
+    name: 'assignee',
+    label: '담당자',
+    align: 'center',
+    width: 80,
+    template: (task: any) => task.assignee || '미배정',
+  },
+  {
     name: 'progress',
     label: '진행률',
     align: 'center',
-    width: 70,
+    width: 65,
     template: (task: any) => Math.round(task.progress * 100) + '%',
   },
   { name: 'add', label: '', width: 44 },
@@ -50,4 +57,5 @@ export const ganttBaseConfig = {
   details_on_dblclick: true,
   show_progress: true,
   scale_height: 50,
+  grid_width: 500, // 그리드(왼쪽 컬럼) 전체 너비
 };

@@ -268,7 +268,8 @@ export const apiTaskToSvar = ({
   progress,
   parent,
   status,
-  assignee,
+  assigneeName,
+  assigneeEmail,
 }: TaskFlatDto): SvarTask => {
   const startDate = new Date(start);
   let endDate = new Date(end);
@@ -297,7 +298,8 @@ export const apiTaskToSvar = ({
 
   // 커스텀 속성 저장
   (svarTask as any).status = status;
-  (svarTask as any).assignee = assignee;
+  (svarTask as any).assigneeName = assigneeName;
+  (svarTask as any).assigneeEmail = assigneeEmail;
 
   return svarTask;
 };

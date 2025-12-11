@@ -32,7 +32,8 @@ export const apiTaskToDhtmlx = (apiTask: any): DhtmlxTask => {
     progress: (apiTask.progress || 0) / 100,
     parent: apiTask.parent || 0,
     open: true,
-    assignee: apiTask.assignee || '', // 담당자 이름
+    assignee: apiTask.assigneeName || '', // 담당자 이름 (표시용)
+    assignee_email: apiTask.assigneeEmail || '', // 담당자 이메일 (API 전송용)
   };
 };
 

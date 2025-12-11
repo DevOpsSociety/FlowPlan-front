@@ -21,6 +21,9 @@ export function useGanttEvents(
   setContextMenu: (state: ContextMenuState | ((prev: ContextMenuState) => ContextMenuState)) => void
 ) {
   useEffect(() => {
+    // 변경 전 task 데이터를 저장할 Map
+    const taskBeforeUpdate = new Map<any, any>();
+
     // 우클릭 컨텍스트 메뉴
     const contextMenuHandler = gantt.attachEvent(
       'onContextMenu',
@@ -42,47 +45,131 @@ export function useGanttEvents(
       return true;
     });
 
-    // 작업 수정 이벤트 (드래그, 라이트박스 저장 등)
+    // 작업 수정 전 - 원본 데이터 저장
+    const beforeTaskUpdateHandler = gantt.attachEvent(
+      'onBeforeTaskUpdate',
+      (id: any, task: any) => {
+        // ✅ Level 1 개선: 하위 작업도 0-100% 자유롭게 설정 가능
+        // 진행률 제한 검증 제거
+
+        // ⚠️ 주의: 드래그 중에는 이 이벤트가 여러 번 호출될 수 있음
+        // onBeforeTaskDrag에서 이미 초기값을 저장했으면 절대 덮어쓰지 않음!
+        if (!taskBeforeUpdate.has(id)) {
+          // Gantt 차트에서 현재 저장된 원본 데이터를 가져옴
+          const originalTask = gantt.getTask(id);
+
+          console.log('📋 [Debug] onBeforeTaskUpdate - Saving ORIGINAL state from gantt:', {
+            id,
+            originalProgress: originalTask.progress,
+            taskProgress: task.progress,
+            progressType: typeof originalTask.progress,
+            progressRounded: Math.round((originalTask.progress || 0) * 100),
+          });
+
+          // 변경 전 상태를 저장
+          taskBeforeUpdate.set(id, {
+            text: originalTask.text,
+            start_date: new Date(originalTask.start_date || new Date()),
+            duration: originalTask.duration,
+            progress: originalTask.progress || 0,
+            assignee_email: originalTask.assignee_email,
+          });
+        } else {
+          console.log('📋 [Debug] onBeforeTaskUpdate - SKIP! Already saved:', {
+            id,
+            savedProgress: taskBeforeUpdate.get(id).progress,
+            savedProgressRounded: Math.round((taskBeforeUpdate.get(id).progress || 0) * 100),
+          });
+        }
+
+        return true;
+      }
+    );
+
+    // 작업 수정 후 - 변경된 필드만 추출해서 API 전송
     const taskUpdateHandler = gantt.attachEvent('onAfterTaskUpdate', (id: any, task: any) => {
-      console.log('📝 [Gantt] onAfterTaskUpdate:', { id, task, progress: task.progress });
-      const startDateStr = gantt.templates.format_date(task.start_date);
+      console.log('📝 [Gantt] onAfterTaskUpdate:', { id, task });
 
-      // endDate 계산: start_date + duration
-      const endDate = gantt.calculateEndDate(task.start_date, task.duration);
-      const endDateStr = gantt.templates.format_date(endDate);
+      // 이전 데이터 가져오기
+      const before = taskBeforeUpdate.get(id);
+      if (!before) {
+        console.warn('⚠️ No before data found for task:', id);
+        return;
+      }
 
-      let progressValue = Math.round(task.progress * 100);
+      // 변경된 필드만 추출
+      const updates: any = {};
 
-      // 하위 작업의 경우 진행률을 0 또는 100으로만 제한
-      if (task.parent && task.parent !== 0) {
-        if (progressValue !== 0 && progressValue !== 100) {
-          // 50% 기준으로 0 또는 100으로 스냅
-          progressValue = progressValue >= 50 ? 100 : 0;
-          // Gantt 차트의 task도 업데이트하여 UI에 반영
-          task.progress = progressValue / 100;
-          gantt.updateTask(id);
-          toast.info('하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.');
+      // 1. 작업명 비교
+      if (task.text !== before.text) {
+        updates.name = task.text;
+      }
+
+      // 2. 시작일 비교
+      const beforeStartStr = gantt.templates.format_date(before.start_date);
+      const currentStartStr = gantt.templates.format_date(task.start_date);
+      if (currentStartStr !== beforeStartStr) {
+        updates.startDate = dhtmlxDateToApi(currentStartStr);
+      }
+
+      // 3. 기간/종료일 비교
+      if (task.duration !== before.duration) {
+        const endDate = gantt.calculateEndDate(task.start_date, task.duration);
+        const endDateStr = gantt.templates.format_date(endDate);
+        updates.endDate = dhtmlxDateToApi(endDateStr);
+      }
+
+      // 4. 진행률 비교
+      console.log('🔍 [Debug] Progress comparison:', {
+        taskProgress: task.progress,
+        beforeProgress: before.progress,
+        areEqual: task.progress === before.progress,
+        taskProgressType: typeof task.progress,
+        beforeProgressType: typeof before.progress,
+        taskProgressRounded: Math.round(task.progress * 100),
+        beforeProgressRounded: Math.round(before.progress * 100),
+      });
+
+      if (task.progress !== before.progress) {
+        const progressValue = Math.round(task.progress * 100);
+        updates.progress = progressValue;
+        updates.status = getStatusFromProgress(progressValue);
+        console.log('✅ [Debug] Progress change detected, adding to updates:', {
+          progressValue,
+          status: updates.status,
+        });
+      }
+
+      // 5. 담당자 이메일 비교
+      if (task.assignee_email !== before.assignee_email) {
+        if (task.assignee_email) {
+          updates.assigneeEmail = task.assignee_email;
         }
       }
 
+      // 변경된 필드가 없으면 API 호출 안 함
+      if (Object.keys(updates).length === 0) {
+        console.log('✅ [Gantt] No changes detected, skipping API call');
+        taskBeforeUpdate.delete(id);
+        return;
+      }
+
+      console.log('📤 [Gantt] Sending only changed fields:', updates);
+
       updateMutationRef.current.mutate({
         taskId: Number(id),
-        updates: {
-          name: task.text,
-          startDate: dhtmlxDateToApi(startDateStr),
-          endDate: dhtmlxDateToApi(endDateStr),
-          progress: progressValue,
-          status: getStatusFromProgress(progressValue),
-          assigneeEmail: task.assignee_email ? task.assignee_email : null,
-        },
+        updates,
       });
+
+      // 저장된 이전 데이터 제거
+      taskBeforeUpdate.delete(id);
     });
 
-    // 진행률 드래그 시작 전 검증 (하위 작업이 있는 상위 작업 차단)
+    // 진행률 드래그 시작 전 검증 및 초기값 저장
     const beforeTaskDragHandler = gantt.attachEvent('onBeforeTaskDrag', (id: any, mode: any) => {
       const task = gantt.getTask(id);
 
-      // 진행률 드래그 모드인 경우에만 체크 (mode === 'progress')
+      // 진행률 드래그 모드인 경우
       if (mode === 'progress') {
         // 하위 작업이 있는지 확인
         const hasSubtasks = gantt.hasChild(id);
@@ -93,45 +180,27 @@ export function useGanttEvents(
           );
           return false; // 드래그 취소
         }
+
+        // ✅ 드래그 시작 시점의 진행률을 저장 (이게 진짜 "before" 상태)
+        // ⚠️ id를 Number로 변환해서 저장 (일관성 유지)
+        const taskId = Number(id);
+        console.log('🎯 [Debug] onBeforeTaskDrag - Saving INITIAL progress:', {
+          id: taskId,
+          idType: typeof taskId,
+          initialProgress: task.progress,
+          progressRounded: Math.round((task.progress || 0) * 100),
+        });
+
+        taskBeforeUpdate.set(taskId, {
+          text: task.text,
+          start_date: new Date(task.start_date || new Date()),
+          duration: task.duration,
+          progress: task.progress || 0, // 드래그 시작 시점의 진행률
+          assignee_email: task.assignee_email,
+        });
       }
 
       return true; // 드래그 허용
-    });
-
-    // 진행률 드래그 완료 이벤트 (drag_progress 사용 시)
-    const taskDragHandler = gantt.attachEvent('onAfterTaskDrag', (id: any, mode: any, e: any) => {
-      const task = gantt.getTask(id);
-      console.log('🎯 [Gantt] onAfterTaskDrag:', { id, mode, progress: task.progress });
-
-      const startDateStr = gantt.templates.format_date(task.start_date as Date);
-      const endDate = gantt.calculateEndDate(task.start_date as Date, task.duration || 1);
-      const endDateStr = gantt.templates.format_date(endDate as Date);
-
-      let progressValue = Math.round((task.progress || 0) * 100);
-
-      // 하위 작업의 경우 진행률을 0 또는 100으로만 제한
-      if (task.parent && task.parent !== 0) {
-        if (progressValue !== 0 && progressValue !== 100) {
-          // 50% 기준으로 0 또는 100으로 스냅
-          progressValue = progressValue >= 50 ? 100 : 0;
-          // Gantt 차트의 task도 업데이트하여 UI에 반영
-          task.progress = progressValue / 100;
-          gantt.updateTask(id);
-          toast.info('하위 작업은 0% 또는 100%의 진행률만 선택 가능합니다.');
-        }
-      }
-
-      updateMutationRef.current.mutate({
-        taskId: Number(id),
-        updates: {
-          name: task.text,
-          startDate: dhtmlxDateToApi(startDateStr),
-          endDate: dhtmlxDateToApi(endDateStr),
-          progress: progressValue,
-          status: getStatusFromProgress(progressValue),
-          assigneeEmail: task.assignee_email ? task.assignee_email : null,
-        },
-      });
     });
 
     // 작업 추가 이벤트 (API 연동 + Depth 검증)
@@ -167,9 +236,9 @@ export function useGanttEvents(
     return () => {
       gantt.detachEvent(contextMenuHandler);
       gantt.detachEvent(taskCreatedHandler);
+      gantt.detachEvent(beforeTaskUpdateHandler);
       gantt.detachEvent(taskUpdateHandler);
       gantt.detachEvent(beforeTaskDragHandler);
-      gantt.detachEvent(taskDragHandler);
       gantt.detachEvent(taskAddHandler);
     };
   }, [projectId, createMutationRef, updateMutationRef, setContextMenu]);

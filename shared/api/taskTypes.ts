@@ -14,7 +14,8 @@ export interface TaskFlatDto {
   duration: number; // int32 (일 단위)
   progress: number; // int32 (0-100)
   status: 'TODO' | 'IN_PROGRESS' | 'DONE';
-  assignee: string; // 담당자 이름
+  assigneeName: string; // 담당자 이름
+  assigneeEmail: string; // 담당자 이메일
 }
 
 /**
