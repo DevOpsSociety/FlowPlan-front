@@ -12,6 +12,7 @@ import type {
   RealtimeEvent,
   TeamMember,
   UserRole,
+  BackendTask,
 } from './apiTypes';
 
 class ApiService {
@@ -21,31 +22,66 @@ class ApiService {
 
   constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || '/api') {
     this.baseUrl = baseUrl;
-    this.token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    this.token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    // 1. URL 정리
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
-      ...options.headers,
+
+    // 2. 토큰 가져오기
+    const currentToken = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+
+    // 3. 헤더 구성 (일단 토큰만 넣음)
+    const headers: Record<string, string> = {
+      ...(currentToken && { Authorization: `Bearer ${currentToken}` }),
     };
+
+    // 4. options에서 들어온 헤더가 있으면 합치기 (단, Content-Type은 제외)
+    if (options.headers) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        if (key.toLowerCase() !== 'content-type') {
+          headers[key] = value as string;
+        }
+      });
+    }
+
+    // 5. 메소드 확인
+    const method = options.method ? options.method.toUpperCase() : 'GET';
+
+    // 6. [중요] GET이 아닐 때만 Content-Type 추가
+    if (method !== 'GET') {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    console.log(`📡 [API 요청] ${method} ${url}`);
 
     try {
       const response = await fetch(url, {
         ...options,
-        headers,
+        method,
+        headers, // 깨끗하게 정리된 헤더 사용
+        // [핵심] GET 요청일 때 body가 있으면 에러나는 브라우저/서버가 있음. 강제로 undefined 처리.
+        body: method === 'GET' ? undefined : options.body,
       });
 
+      const text = await response.text();
+      console.log(`🔢 [상태 코드] ${response.status}`);
+
       if (!response.ok) {
-        const error: ApiError = await response.json();
-        throw new Error(error.message || 'API request failed');
+        // 에러 메시지 파싱
+        let errorMessage = text;
+        try {
+          const errorJson = JSON.parse(text);
+          errorMessage = errorJson.message || JSON.stringify(errorJson);
+        } catch {}
+        throw new Error(`API Error (${response.status}): ${errorMessage}`);
       }
 
-      return await response.json();
+      if (!text) return {} as any;
+      return JSON.parse(text);
     } catch (error) {
-      console.error('API request failed:', error);
+      console.error('Final API Error:', error);
       throw error;
     }
   }
@@ -62,7 +98,7 @@ class ApiService {
 
     if (response.success && response.data.token) {
       this.token = response.data.token;
-      localStorage.setItem('auth_token', this.token);
+      localStorage.setItem('authToken', this.token);
     }
 
     return response;
@@ -70,7 +106,7 @@ class ApiService {
 
   async logout(): Promise<void> {
     this.token = null;
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('authToken');
   }
 
   // 프로젝트 관련
@@ -141,6 +177,24 @@ class ApiService {
     return this.request<void>(`/projects/${projectId}/tasks/${taskId}`, {
       method: 'DELETE',
     });
+  }
+
+  async getProjectTasks(projectId: string): Promise<BackendTask[]> {
+    // 1. 스웨거에 적힌 URL 경로
+    const endpoint = `/api/tasks/projects/${projectId}/tasks`;
+
+    // 2. this.request를 사용해서 호출 (토큰 자동 포함됨)
+    // 백엔드 응답 구조가 { projectId: ..., tasks: [...] } 이므로 타입을 이렇게 정의
+    const response = await this.request<{ tasks: BackendTask[] }>(endpoint, {
+      method: 'GET',
+    });
+
+    // 3. 응답 데이터(response.data) 안에 있는 tasks 배열만 꺼내서 반환
+    if (response.success && response.data && response.data.tasks) {
+      return response.data.tasks;
+    }
+
+    return [];
   }
 
   // 댓글 관련
