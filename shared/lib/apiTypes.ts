@@ -117,7 +117,7 @@ export interface Task {
   duration_days: number;
   progress: number; // 0-100
   status: TaskStatus;
-  subtasks: Task[];
+  subtasks?: Task[];
 }
 
 // 백엔드 API WBS 응답 타입
@@ -190,4 +190,16 @@ export interface RealtimeEvent {
   userId: string;
   projectId: string;
   timestamp: string;
+}
+
+export interface BackendTask {
+  id: number;
+  parent: number; // 최상위면 자기 자신 ID거나 null 일 수 있음 (명세 확인 필요, 여기선 parent ID)
+  name: string;
+  start: string;
+  end: string;
+  duration: number;
+  progress: number;
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'; // 백엔드 Enum 예시
+  assigneeEmail: string;
 }
