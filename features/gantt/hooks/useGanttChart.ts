@@ -128,8 +128,10 @@ export function useGanttChart(
 
     if (viewMode === 'month') {
       gantt.config.scales = monthViewScales as any;
+      gantt.config.min_column_width = 250; // 월별 뷰: 더 넓은 컬럼
     } else {
       gantt.config.scales = dayViewScales as any;
+      gantt.config.min_column_width = 70; // 일별 뷰: 기본 컬럼 너비
     }
     gantt.config.scale_height = 50;
     gantt.render();
