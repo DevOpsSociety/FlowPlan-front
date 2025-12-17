@@ -1,16 +1,17 @@
 'use client';
 
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Progress } from '@/shared/ui/progress';
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import { Calendar, ChevronDown, ChevronRight, Clock, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
 
 interface KanbanTaskCardProps {
-  task: SvarTask;
-  onEdit: (task: SvarTask) => void;
+  task: TaskFlatDto;
+  onEdit: (task: TaskFlatDto) => void;
   onDelete: (taskId: number, taskName: string) => void;
+  onAddSubtask?: (parentId: number) => void;
   isDragging?: boolean;
   // 부모 작업 전용 props
   hasSubtasks?: boolean;
@@ -32,6 +33,7 @@ export function KanbanTaskCard({
   task,
   onEdit,
   onDelete,
+  onAddSubtask,
   isDragging = false,
   hasSubtasks = false,
   isExpanded = false,
@@ -48,12 +50,12 @@ export function KanbanTaskCard({
       .toUpperCase();
   };
 
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return '-';
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const assigneeName = (task as any).assigneeName;
   const rotateClass = variant === 'parent' ? 'rotate-2' : 'rotate-1';
 
   return (
@@ -64,8 +66,23 @@ export function KanbanTaskCard({
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">{task.text}</h5>
+          <h5 className="font-medium text-sm leading-tight line-clamp-2 flex-1">{task.name}</h5>
           <div className="flex gap-1">
+            {/* 상위 작업일 때만 추가 버튼 표시 */}
+            {variant === 'parent' && onAddSubtask && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 hover:bg-muted"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddSubtask(task.id);
+                }}
+                title="하위 작업 추가"
+              >
+                <Plus className="h-3 w-3 text-muted-foreground" />
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -83,7 +100,7 @@ export function KanbanTaskCard({
               className="h-6 w-6 p-0 hover:bg-destructive/10"
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete(task.id as number, task.text ?? '이름 없는 작업');
+                onDelete(task.id, task.name ?? '이름 없는 작업');
               }}
             >
               <Trash2 className="h-3 w-3 text-destructive" />
@@ -102,14 +119,14 @@ export function KanbanTaskCard({
         </div>
 
         {/* 담당자 */}
-        {assigneeName && (
+        {task.assigneeName && (
           <div className="flex items-center space-x-2">
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs">
-                {getAssigneeInitials(assigneeName)}
+                {getAssigneeInitials(task.assigneeName)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground">{assigneeName}</span>
+            <span className="text-xs text-muted-foreground">{task.assigneeName}</span>
           </div>
         )}
 

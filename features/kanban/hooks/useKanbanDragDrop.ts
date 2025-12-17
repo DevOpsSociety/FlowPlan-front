@@ -1,12 +1,12 @@
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 import type { DropResult } from '@hello-pangea/dnd';
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type { KanbanColumnId } from '../config/kanbanConfig';
 import { getSubtasks, kanbanToApiStatus } from '../utils/kanbanTransformers';
 
 interface UseKanbanDragDropParams {
-  tasks: SvarTask[];
+  tasks: TaskFlatDto[];
   updateTaskMutation: UseMutationResult<any, Error, any, unknown>;
   toast: (options: { title: string; description?: string }) => void;
 }
@@ -56,59 +56,26 @@ export function useKanbanDragDrop({ tasks, updateTaskMutation, toast }: UseKanba
       const taskId = Number(taskIdStr);
       const isSubtask = taskType === 'subtask';
 
-      // 부모 작업인 경우: 모든 자식도 함께 이동
+      // 부모 작업인 경우: 상위 작업만 수정 (백엔드에서 하위 작업 자동 처리)
       if (!isSubtask) {
         const subtasks = getSubtasks(tasks, taskId);
         const hasSubtasks = subtasks.length > 0;
+        const task = tasks.find((t) => t.id === taskId);
+        const newProgress = calculateNewProgress(task?.progress || 0, newKanbanStatus);
+
+        // 상위 작업만 수정 요청 (하위 작업은 백엔드에서 자동 처리)
+        updateTaskMutation.mutate({
+          taskId,
+          updates: {
+            status: newApiStatus,
+            progress: newProgress,
+          },
+        });
 
         if (hasSubtasks) {
-          // 모든 자식 작업의 새 진행률을 미리 계산
-          let totalNewProgress = 0;
-          subtasks.forEach((subtask) => {
-            const newProgress = calculateNewProgress(subtask.progress || 0, newKanbanStatus);
-            totalNewProgress += newProgress;
-          });
-
-          // 부모의 새 진행률 = 자식들의 평균
-          const parentNewProgress = Math.round(totalNewProgress / subtasks.length);
-
-          // 부모 작업 업데이트 (상태 + 계산된 진행률)
-          updateTaskMutation.mutate({
-            taskId,
-            updates: {
-              status: newApiStatus,
-              progress: parentNewProgress,
-            },
-          });
-
-          // 모든 자식 작업도 같은 상태로 업데이트
-          subtasks.forEach((subtask) => {
-            const newProgress = calculateNewProgress(subtask.progress || 0, newKanbanStatus);
-
-            updateTaskMutation.mutate({
-              taskId: Number(subtask.id),
-              updates: {
-                status: newApiStatus,
-                progress: newProgress,
-              },
-            });
-          });
-
           toast({
             title: '작업 상태 변경',
-            description: `${subtasks.length}개의 하위 작업도 함께 이동되었습니다.`,
-          });
-        } else {
-          // 하위 작업이 없는 부모: 진행률도 함께 변경
-          const task = tasks.find((t) => t.id === taskId);
-          const newProgress = calculateNewProgress(task?.progress || 0, newKanbanStatus);
-
-          updateTaskMutation.mutate({
-            taskId,
-            updates: {
-              status: newApiStatus,
-              progress: newProgress,
-            },
+            description: `상위 작업과 ${subtasks.length}개의 하위 작업이 함께 이동됩니다.`,
           });
         }
       } else {

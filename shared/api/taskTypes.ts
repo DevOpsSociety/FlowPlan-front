@@ -40,6 +40,7 @@ export interface CreateTaskDto {
   name: string;
   parentId?: number;
   assigneeId?: number;
+  assigneeEmail?: string;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   status: string;

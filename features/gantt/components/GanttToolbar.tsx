@@ -1,10 +1,11 @@
 import { Button } from '@/shared/ui/button';
-import { Calendar, CalendarDays, Plus } from 'lucide-react';
+import { Calendar, CalendarDays, Plus, RefreshCw } from 'lucide-react';
 
 interface GanttToolbarProps {
   viewMode: 'day' | 'month';
   onViewModeChange: (mode: 'day' | 'month') => void;
   onAddTask: () => void;
+  onRefresh: () => void;
 }
 
 /**
@@ -13,7 +14,12 @@ interface GanttToolbarProps {
  * - 뷰 모드 전환 (일별/월별)
  * - 작업 추가 버튼
  */
-export function GanttToolbar({ viewMode, onViewModeChange, onAddTask }: GanttToolbarProps) {
+export function GanttToolbar({
+  viewMode,
+  onViewModeChange,
+  onAddTask,
+  onRefresh,
+}: GanttToolbarProps) {
   return (
     <div className="flex items-center justify-between">
       <h3 className="text-lg font-semibold">간트차트</h3>
@@ -38,6 +44,10 @@ export function GanttToolbar({ viewMode, onViewModeChange, onAddTask }: GanttToo
             월별
           </Button>
         </div>
+        <Button onClick={onRefresh} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          새로고침
+        </Button>
         <Button onClick={onAddTask} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           작업 추가

@@ -1,7 +1,6 @@
 import { createTask, deleteTask, fetchTasks, updateTask } from '@/shared/api/taskApi';
 import type { CreateTaskDto, TaskFlatDto, UpdateTaskDto } from '@/shared/api/taskTypes';
 import { useToast } from '@/shared/hooks/useToast';
-import { getStatusFromProgress } from '@/shared/utils/taskStatusUtils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // ===== 조회 훅 =====
@@ -87,7 +86,10 @@ export const useUpdateTask = (projectId: string) => {
       // 진행률 제한 검증 제거 - 모든 작업이 동일하게 0-100% 사용 가능
 
       // 상위 작업의 진행률 수동 변경 차단 (하위 작업이 있는 경우)
+      // 단, status가 함께 변경되는 경우(칸반 드래그 등)는 허용
+      const isStatusChange = updates.status !== undefined;
       if (
+        !isStatusChange &&
         !cachedTasks?.find((t) => t.id === taskId)?.parent &&
         updates.progress !== undefined &&
         cachedTasks
@@ -108,62 +110,9 @@ export const useUpdateTask = (projectId: string) => {
       const updatedTask = await updateTask(taskId, updates);
       console.log('✅ [TaskUpdate] 업데이트 완료:', updatedTask);
 
-      // 2. 캐시 다시 가져오기 (최신 데이터)
-      const refreshedCachedTasks = queryClient.getQueryData<TaskFlatDto[]>(['tasks', projectId]);
-      console.log('📦 [TaskUpdate] 캐시 태스크 목록:', {
-        총개수: refreshedCachedTasks?.length,
-        updatedTaskParent: updatedTask.parent,
-      });
-
-      if (refreshedCachedTasks && updatedTask.parent) {
-        // 3. 동일한 부모를 가진 모든 하위 태스크 찾기
-        const siblings = refreshedCachedTasks.filter((task) => task.parent === updatedTask.parent);
-        console.log('👥 [TaskUpdate] 형제 태스크 찾기:', {
-          parentId: updatedTask.parent,
-          siblingsCount: siblings.length,
-          siblings: siblings.map((s) => ({ id: s.id, name: s.name, progress: s.progress })),
-        });
-
-        // 4. 업데이트된 태스크를 포함하여 진행률 계산
-        const updatedSiblings = siblings.map((sibling) =>
-          sibling.id === updatedTask.id ? updatedTask : sibling
-        );
-
-        console.log('🔄 [TaskUpdate] 업데이트된 형제 목록:', {
-          siblings: updatedSiblings.map((s) => ({ id: s.id, name: s.name, progress: s.progress })),
-        });
-
-        // 5. 모든 하위 태스크의 진행률 평균 계산
-        const totalProgress = updatedSiblings.reduce((sum, task) => sum + task.progress, 0);
-        const parentProgress = Math.round(totalProgress / updatedSiblings.length);
-
-        // 6. 진행률에 따른 상태 계산
-        const parentStatus = getStatusFromProgress(parentProgress);
-
-        console.log('📊 [TaskUpdate] 상위 태스크 계산 결과:', {
-          parentId: updatedTask.parent,
-          totalProgress,
-          siblingsCount: updatedSiblings.length,
-          parentProgress,
-          parentStatus,
-        });
-
-        // 7. 상위 태스크의 진행률과 상태 업데이트
-        try {
-          await updateTask(updatedTask.parent, {
-            progress: parentProgress,
-            status: parentStatus,
-          });
-          console.log('✅ [TaskUpdate] 상위 태스크 업데이트 완료');
-        } catch (error) {
-          console.error('❌ [TaskUpdate] 상위 태스크 업데이트 실패:', error);
-        }
-      } else {
-        console.log('ℹ️ [TaskUpdate] 상위 태스크 업데이트 스킵:', {
-          hasCachedTasks: !!refreshedCachedTasks,
-          hasParent: !!updatedTask.parent,
-        });
-      }
+      // 상위 작업 자동 계산 로직 제거 (디버깅용)
+      // 백엔드에서 상위 작업 진행률을 자동으로 계산하는지 확인
+      console.log('✅ [TaskUpdate] 완료 (상위 작업 후처리 없음):', updatedTask);
 
       return updatedTask;
     },

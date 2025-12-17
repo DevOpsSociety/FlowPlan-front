@@ -12,11 +12,11 @@ import 'dhtmlx-gantt/codebase/dhtmlxgantt.css';
 import { useParams } from 'next/navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
 import { useContextMenu } from '../hooks/useContextMenu';
 import { useGanttChart } from '../hooks/useGanttChart';
 import { useGanttEvents } from '../hooks/useGanttEvents';
 import { useGanttLocale } from '../hooks/useGanttLocale';
+import { GanttChartSkeleton } from '../skeletons/GanttChartSkeleton';
 import { apiTaskToDhtmlx } from '../utils/ganttTransformers';
 import { GanttCanvas } from './GanttCanvas';
 import { GanttToolbar } from './GanttToolbar';
@@ -81,6 +81,11 @@ export function GanttChartView() {
     closeContextMenu();
   }, [contextMenu.taskId, closeContextMenu, deleteTaskMutation]);
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+    toast.success('데이터를 새로고침했습니다');
+  }, [refetch]);
+
   if (isLoading) return <GanttChartSkeleton />;
 
   if (error) {
@@ -97,7 +102,12 @@ export function GanttChartView() {
 
   return (
     <div className="space-y-4">
-      <GanttToolbar viewMode={viewMode} onViewModeChange={setViewMode} onAddTask={handleAddTask} />
+      <GanttToolbar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        onAddTask={handleAddTask}
+        onRefresh={handleRefresh}
+      />
       <GanttCanvas
         containerRef={containerRef}
         tasks={tasks}

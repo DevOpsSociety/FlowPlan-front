@@ -47,10 +47,13 @@ export const createTask = async (
  * @returns 수정된 TaskFlatDto
  */
 export const updateTask = async (taskId: number, updates: UpdateTaskDto): Promise<TaskFlatDto> => {
-  return apiRequest<TaskFlatDto>(`/api/tasks/${taskId}`, {
+  console.log('🚀 [API] updateTask 요청:', { taskId, updates, url: `/api/tasks/${taskId}` });
+  const result = await apiRequest<TaskFlatDto>(`/api/tasks/${taskId}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
+  console.log('📥 [API] updateTask 응답:', { taskId, result });
+  return result;
 };
 
 /**

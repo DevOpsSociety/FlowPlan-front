@@ -1,6 +1,6 @@
 'use client';
 
-import type { CreateTaskDto } from '@/shared/api/taskTypes';
+import type { CreateTaskDto, TaskFlatDto } from '@/shared/api/taskTypes';
 import {
   useCreateTask,
   useDeleteTask,
@@ -8,20 +8,19 @@ import {
   useUpdateTask,
 } from '@/shared/hooks/queries/useTaskQuery';
 import { useToast } from '@/shared/hooks/useToast';
-import { apiTaskToSvar } from '@/shared/lib/taskAdapters';
 import { Button } from '@/shared/ui/button';
 import { DragDropContext } from '@hello-pangea/dnd';
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
 import { Plus, RefreshCw } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import type { KanbanColumnId } from '../config/kanbanConfig';
-import { PROGRESS_BY_COLUMN, STATUS_BY_COLUMN, kanbanColumns } from '../config/kanbanConfig';
+import { useState } from 'react';
+import { toast as sonnerToast } from 'sonner';
+import { kanbanColumns } from '../config/kanbanConfig';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { useKanbanExpansion } from '../hooks/useKanbanExpansion';
 import { KanbanBoardSkeleton } from '../skeletons/KanbanBoardSkeleton';
 import { groupTasksByStatus } from '../utils/kanbanTransformers';
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanCreateDialog } from './KanbanCreateDialog';
 import { KanbanEditDialog, type EditingTask } from './KanbanEditDialog';
 
 export function KanbanBoard() {
@@ -29,28 +28,16 @@ export function KanbanBoard() {
   const projectId = params.id as string;
   const { toast } = useToast();
 
-  // 새 작업 추가를 위한 state (컬럼별)
-  const [newTaskInputs, setNewTaskInputs] = useState<
-    Record<string, { name: string; assignee: string }>
-  >({
-    todo: { name: '', assignee: '' },
-    'in-progress': { name: '', assignee: '' },
-    done: { name: '', assignee: '' },
-  });
-
-  const [showNewTaskInput, setShowNewTaskInput] = useState<Record<string, boolean>>({
-    todo: false,
-    'in-progress': false,
-    done: false,
-  });
-
   // 작업 수정을 위한 state
   const [editingTask, setEditingTask] = useState<EditingTask | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // API에서 원본 데이터를 가져와서 SVAR 형식으로 변환
-  const { data: rawTasks = [], isLoading, error, refetch } = useTasks(projectId);
-  const tasks = useMemo(() => rawTasks.map(apiTaskToSvar), [rawTasks]);
+  // 작업 생성을 위한 state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createParentId, setCreateParentId] = useState<number | null>(null);
+
+  // API에서 원본 데이터를 가져옴 (TaskFlatDto[] 직접 사용)
+  const { data: tasks = [], isLoading, error, refetch } = useTasks(projectId);
 
   // Mutations
   const updateTaskMutation = useUpdateTask(projectId);
@@ -73,43 +60,42 @@ export function KanbanBoard() {
   // 데이터 새로고침
   const handleRefresh = () => {
     refetch();
-    toast({
-      title: '데이터를 새로고침했습니다',
-      description: '최신 데이터를 불러왔습니다.',
+    sonnerToast.success('데이터를 새로고침했습니다');
+  };
+
+  // 작업 생성 핸들러
+  const handleCreateTask = (taskData: {
+    name: string;
+    assigneeEmail: string;
+    parentId?: number;
+  }) => {
+    const today = new Date().toISOString().split('T')[0];
+
+    const createData: CreateTaskDto = {
+      name: taskData.name,
+      status: 'TODO',
+      progress: 0,
+      startDate: today,
+      endDate: today,
+      ...(taskData.assigneeEmail && { assigneeEmail: taskData.assigneeEmail }),
+      ...(taskData.parentId && { parentId: taskData.parentId }),
+    };
+
+    createTaskMutation.mutate(createData, {
+      onSuccess: () => {
+        setIsCreateOpen(false);
+        setCreateParentId(null);
+        toast({
+          title: taskData.parentId ? '하위 작업이 생성되었습니다' : '작업이 생성되었습니다',
+        });
+      },
     });
   };
 
-  // 작업 추가 핸들러
-  const handleAddTask = (columnId: KanbanColumnId) => {
-    const taskName = newTaskInputs[columnId].name.trim();
-
-    if (!taskName) {
-      toast({
-        title: '작업 이름을 입력하세요',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const today = new Date();
-
-    const taskData: CreateTaskDto = {
-      name: taskName,
-      status: STATUS_BY_COLUMN[columnId],
-      progress: PROGRESS_BY_COLUMN[columnId],
-      startDate: today.toISOString().split('T')[0],
-      endDate: today.toISOString().split('T')[0],
-    };
-
-    createTaskMutation.mutate(taskData, {
-      onSuccess: () => {
-        setNewTaskInputs((prev) => ({
-          ...prev,
-          [columnId]: { name: '', assignee: '' },
-        }));
-        setShowNewTaskInput((prev) => ({ ...prev, [columnId]: false }));
-      },
-    });
+  // 하위 작업 추가 핸들러
+  const handleAddSubtask = (parentId: number) => {
+    setCreateParentId(parentId);
+    setIsCreateOpen(true);
   };
 
   // 작업 삭제 핸들러
@@ -131,7 +117,7 @@ export function KanbanBoard() {
 
     const updates: any = {};
 
-    if (editingTask.name !== (originalTask.text || '')) {
+    if (editingTask.name !== originalTask.name) {
       updates.name = editingTask.name;
     }
 
@@ -148,19 +134,15 @@ export function KanbanBoard() {
       updates.status = newStatus;
     }
 
-    const originalStartDate = originalTask.start
-      ? originalTask.start.toISOString().split('T')[0]
-      : '';
-    if (editingTask.startDate !== originalStartDate) {
+    if (editingTask.startDate !== originalTask.start) {
       updates.startDate = editingTask.startDate;
     }
 
-    const originalEndDate = originalTask.end ? originalTask.end.toISOString().split('T')[0] : '';
-    if (editingTask.endDate !== originalEndDate) {
+    if (editingTask.endDate !== originalTask.end) {
       updates.endDate = editingTask.endDate;
     }
 
-    const originalEmail = (originalTask as any).assigneeEmail || '';
+    const originalEmail = originalTask.assigneeEmail || '';
     if (editingTask.assigneeEmail !== originalEmail) {
       if (editingTask.assigneeEmail) {
         updates.assigneeEmail = editingTask.assigneeEmail;
@@ -186,15 +168,15 @@ export function KanbanBoard() {
   };
 
   // 수정 다이얼로그 열기
-  const openEditDialog = (task: SvarTask) => {
+  const openEditDialog = (task: TaskFlatDto) => {
     setEditingTask({
-      id: Number(task.id),
-      name: task.text || '',
+      id: task.id,
+      name: task.name,
       progress: task.progress || 0,
-      startDate: task.start ? task.start.toISOString().split('T')[0] : '',
-      endDate: task.end ? task.end.toISOString().split('T')[0] : '',
-      assigneeName: (task as any).assigneeName || '',
-      assigneeEmail: (task as any).assigneeEmail || '',
+      startDate: task.start,
+      endDate: task.end,
+      assigneeName: task.assigneeName || '',
+      assigneeEmail: task.assigneeEmail || '',
     });
     setIsEditOpen(true);
   };
@@ -235,12 +217,10 @@ export function KanbanBoard() {
             새로고침
           </Button>
           <Button
-            onClick={() =>
-              setShowNewTaskInput((prev) => ({
-                ...prev,
-                todo: !prev.todo,
-              }))
-            }
+            onClick={() => {
+              setCreateParentId(null);
+              setIsCreateOpen(true);
+            }}
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -260,38 +240,9 @@ export function KanbanBoard() {
               allTasks={tasks}
               expandedTasks={expandedTasks}
               onToggleExpansion={toggleTaskExpansion}
-              onAddTask={handleAddTask}
               onEditTask={openEditDialog}
               onDeleteTask={handleDeleteTask}
-              showNewTaskInput={showNewTaskInput[column.id]}
-              onToggleNewTaskInput={() =>
-                setShowNewTaskInput((prev) => ({
-                  ...prev,
-                  [column.id]: !prev[column.id],
-                }))
-              }
-              newTaskName={newTaskInputs[column.id].name}
-              newTaskAssignee={newTaskInputs[column.id].assignee}
-              onNewTaskNameChange={(value) =>
-                setNewTaskInputs((prev) => ({
-                  ...prev,
-                  [column.id]: { ...prev[column.id], name: value },
-                }))
-              }
-              onNewTaskAssigneeChange={(value) =>
-                setNewTaskInputs((prev) => ({
-                  ...prev,
-                  [column.id]: { ...prev[column.id], assignee: value },
-                }))
-              }
-              onCancelNewTask={() => {
-                setShowNewTaskInput((prev) => ({ ...prev, [column.id]: false }));
-                setNewTaskInputs((prev) => ({
-                  ...prev,
-                  [column.id]: { name: '', assignee: '' },
-                }));
-              }}
-              isCreating={createTaskMutation.isPending}
+              onAddSubtask={handleAddSubtask}
             />
           ))}
         </div>
@@ -305,7 +256,20 @@ export function KanbanBoard() {
         setEditingTask={setEditingTask}
         onSave={handleEditTask}
         isSaving={updateTaskMutation.isPending}
-        rawTasks={rawTasks}
+        rawTasks={tasks}
+      />
+
+      {/* 작업 생성 다이얼로그 */}
+      <KanbanCreateDialog
+        isOpen={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) setCreateParentId(null);
+        }}
+        onSubmit={handleCreateTask}
+        isCreating={createTaskMutation.isPending}
+        parentId={createParentId ?? undefined}
+        parentName={createParentId ? tasks.find((t) => t.id === createParentId)?.name : undefined}
       />
     </div>
   );

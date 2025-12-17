@@ -4,7 +4,7 @@
  * - 작업 그룹화 및 필터링
  */
 
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 import type { KanbanColumnId } from '../config/kanbanConfig';
 
 // ===== 상태 변환 함수 =====
@@ -40,20 +40,18 @@ export const kanbanToApiStatus = (kanban: KanbanColumnId): string => {
 // ===== 작업 그룹화 함수 =====
 
 /**
- * SVAR Task 배열을 칸반 컬럼별로 그룹화 (최상위 작업만)
- * @param tasks - SVAR Task 배열
+ * TaskFlatDto 배열을 칸반 컬럼별로 그룹화 (최상위 작업만)
+ * @param tasks - TaskFlatDto 배열
  * @returns 컬럼별로 그룹화된 작업 객체
  */
-export const groupTasksByStatus = (tasks: SvarTask[]): Record<KanbanColumnId, SvarTask[]> => {
+export const groupTasksByStatus = (tasks: TaskFlatDto[]): Record<KanbanColumnId, TaskFlatDto[]> => {
   // parent가 없는 최상위 작업만 사용
   const topLevelTasks = tasks.filter((t) => !t.parent);
 
   return {
-    todo: topLevelTasks.filter((t) => apiStatusToKanban((t as any).status) === 'todo'),
-    'in-progress': topLevelTasks.filter(
-      (t) => apiStatusToKanban((t as any).status) === 'in-progress'
-    ),
-    done: topLevelTasks.filter((t) => apiStatusToKanban((t as any).status) === 'done'),
+    todo: topLevelTasks.filter((t) => apiStatusToKanban(t.status) === 'todo'),
+    'in-progress': topLevelTasks.filter((t) => apiStatusToKanban(t.status) === 'in-progress'),
+    done: topLevelTasks.filter((t) => apiStatusToKanban(t.status) === 'done'),
   };
 };
 
@@ -63,6 +61,6 @@ export const groupTasksByStatus = (tasks: SvarTask[]): Record<KanbanColumnId, Sv
  * @param parentId - 부모 작업 ID
  * @returns 해당 부모의 하위 작업 배열
  */
-export const getSubtasks = (tasks: SvarTask[], parentId: number | string): SvarTask[] => {
+export const getSubtasks = (tasks: TaskFlatDto[], parentId: number): TaskFlatDto[] => {
   return tasks.filter((t) => t.parent === parentId);
 };

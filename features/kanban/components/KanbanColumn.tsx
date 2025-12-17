@@ -1,13 +1,10 @@
 'use client';
 
+import type { TaskFlatDto } from '@/shared/api/taskTypes';
 import { Badge } from '@/shared/ui/badge';
-import { Button } from '@/shared/ui/button';
 import { Draggable, Droppable } from '@hello-pangea/dnd';
-import type { ITask as SvarTask } from '@svar-ui/react-gantt';
-import { Plus } from 'lucide-react';
 import type { KanbanColumnId } from '../config/kanbanConfig';
 import { getSubtasks } from '../utils/kanbanTransformers';
-import { KanbanNewTaskInput } from './KanbanNewTaskInput';
 import { KanbanTaskCard } from './KanbanTaskCard';
 
 interface KanbanColumnProps {
@@ -16,22 +13,13 @@ interface KanbanColumnProps {
     title: string;
     color: string;
   };
-  tasks: SvarTask[];
-  allTasks: SvarTask[];
+  tasks: TaskFlatDto[];
+  allTasks: TaskFlatDto[];
   expandedTasks: Set<number>;
   onToggleExpansion: (taskId: number) => void;
-  onAddTask: (columnId: KanbanColumnId) => void;
-  onEditTask: (task: SvarTask) => void;
+  onEditTask: (task: TaskFlatDto) => void;
   onDeleteTask: (taskId: number, taskName: string) => void;
-  // 새 작업 입력 관련
-  showNewTaskInput: boolean;
-  onToggleNewTaskInput: () => void;
-  newTaskName: string;
-  newTaskAssignee: string;
-  onNewTaskNameChange: (value: string) => void;
-  onNewTaskAssigneeChange: (value: string) => void;
-  onCancelNewTask: () => void;
-  isCreating: boolean;
+  onAddSubtask: (parentId: number) => void;
 }
 
 /**
@@ -46,17 +34,9 @@ export function KanbanColumn({
   allTasks,
   expandedTasks,
   onToggleExpansion,
-  onAddTask,
   onEditTask,
   onDeleteTask,
-  showNewTaskInput,
-  onToggleNewTaskInput,
-  newTaskName,
-  newTaskAssignee,
-  onNewTaskNameChange,
-  onNewTaskAssigneeChange,
-  onCancelNewTask,
-  isCreating,
+  onAddSubtask,
 }: KanbanColumnProps) {
   return (
     <div>
@@ -70,43 +50,21 @@ export function KanbanColumn({
             }`}
           >
             {/* 컬럼 헤더 */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mb-4">
               <div className="flex items-center space-x-2">
                 <h4 className="font-semibold text-foreground">{column.title}</h4>
                 <Badge variant="secondary" className="text-xs">
                   {tasks.length}
                 </Badge>
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 w-7 p-0"
-                onClick={onToggleNewTaskInput}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
             </div>
-
-            {/* 새 작업 추가 입력창 */}
-            {showNewTaskInput && (
-              <KanbanNewTaskInput
-                columnId={column.id}
-                taskName={newTaskName}
-                assigneeName={newTaskAssignee}
-                onTaskNameChange={onNewTaskNameChange}
-                onAssigneeChange={onNewTaskAssigneeChange}
-                onSubmit={() => onAddTask(column.id)}
-                onCancel={onCancelNewTask}
-                isCreating={isCreating}
-              />
-            )}
 
             {/* 작업 목록 */}
             <div className="space-y-3">
-              {tasks.map((task: SvarTask, index: number) => {
+              {tasks.map((task: TaskFlatDto, index: number) => {
                 const subtasks = getSubtasks(allTasks, task.id);
                 const hasSubtasks = subtasks.length > 0;
-                const isExpanded = expandedTasks.has(Number(task.id));
+                const isExpanded = expandedTasks.has(task.id);
 
                 return (
                   <div key={`task-group-${task.id}`} className="space-y-2">
@@ -126,11 +84,12 @@ export function KanbanColumn({
                             task={task}
                             onEdit={onEditTask}
                             onDelete={onDeleteTask}
+                            onAddSubtask={onAddSubtask}
                             isDragging={dragSnapshot.isDragging}
                             hasSubtasks={hasSubtasks}
                             isExpanded={isExpanded}
                             subtaskCount={subtasks.length}
-                            onToggleExpand={() => onToggleExpansion(Number(task.id))}
+                            onToggleExpand={() => onToggleExpansion(task.id)}
                             variant="parent"
                           />
                         </div>

@@ -50,6 +50,6 @@ export const STATUS_BY_COLUMN: Record<KanbanColumnId, string> = {
  */
 export const PROGRESS_BY_COLUMN: Record<KanbanColumnId, number> = {
   todo: 0,
-  'in-progress': 50,
+  'in-progress': 1,
   done: 100,
 };
