@@ -8,10 +8,16 @@ import { WBSTableSkeleton } from '@/features/wbs/skeletons/WBSTableSkeleton';
  * URL: /project/[id]/wbs-table
  * 계층적 WBS 테이블 뷰를 렌더링합니다.
  */
-export default function WBSTablePage() {
+interface WBSTablePageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function WBSTablePage({ params }: WBSTablePageProps) {
   return (
     <Suspense fallback={<WBSTableSkeleton />}>
-      <WBSTableView />
+      <WBSTableView projectId={params.id} />
     </Suspense>
   );
 }

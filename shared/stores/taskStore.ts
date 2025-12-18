@@ -117,6 +117,8 @@ const groupTasksByStatus = (tasks: Task[]) => {
   };
 };
 
+const EMPTY_ARRAY: Task[] = [];
+
 // Zustand 스토어 생성
 export const useTaskStore = create<TaskState>()(
   devtools(
@@ -125,10 +127,14 @@ export const useTaskStore = create<TaskState>()(
         projectTasks: {},
 
         getTasks: (projectId: string) => {
-          return get().projectTasks[projectId] || [];
+          return get().projectTasks[projectId] || EMPTY_ARRAY;
         },
 
         setTasks: (projectId: string, tasks: Task[]) => {
+          const currentTasks = get().projectTasks[projectId];
+          // 참조가 완전히 동일한 경우에만 업데이트 건너뜀
+          if (currentTasks === tasks) return;
+
           set((state) => ({
             projectTasks: {
               ...state.projectTasks,
