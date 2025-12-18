@@ -14,7 +14,6 @@ interface HierarchicalWBSTableProps {
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
   onTaskAdd: (parentId?: string, taskData?: Partial<Task>) => void;
-  onTaskSelect?: (taskId: string) => void;
 }
 
 interface TaskRowProps {
@@ -30,7 +29,6 @@ interface TaskRowProps {
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
   onTaskAdd: (parentId?: string, taskData?: Partial<Task>) => void;
-  onTaskSelect?: (taskId: string) => void;
   setEditValues: (values: Partial<Task>) => void;
   creatingTask: string | null;
   newTaskValues: Partial<Task>;
@@ -53,7 +51,6 @@ function TaskRow({
   onTaskUpdate,
   onTaskDelete,
   onTaskAdd,
-  onTaskSelect,
   setEditValues,
   creatingTask,
   newTaskValues,
@@ -83,10 +80,7 @@ function TaskRow({
 
   return (
     <>
-      <TableRow
-        className="cursor-pointer hover:bg-muted/50"
-        onClick={() => onTaskSelect?.(task.task_id)}
-      >
+      <TableRow className="hover:bg-muted/50">
         <TableCell>
           {editingTask === task.task_id ? (
             <div style={{ paddingLeft }}>
@@ -155,15 +149,32 @@ function TaskRow({
         </TableCell>
         <TableCell>{formatDuration(task.duration_days)}</TableCell>
         <TableCell>
-          <div className="flex items-center space-x-2">
-            <div className="w-12 bg-muted rounded-full h-2">
-              <div
-                className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${task.progress}%` }}
-              />
+          {editingTask === task.task_id ? (
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              value={editValues.progress ?? task.progress}
+              onChange={(e) =>
+                setEditValues({
+                  ...editValues,
+                  progress: Math.min(100, Math.max(0, Number(e.target.value))),
+                })
+              }
+              className="h-8"
+              disabled={hasSubTasks} // 3. 자식 태스크가 있으면 수정 불가
+            />
+          ) : (
+            <div className="flex items-center space-x-2">
+              <div className="w-12 bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all"
+                  style={{ width: `${task.progress}%` }}
+                />
+              </div>
+              <span className="text-sm text-muted-foreground">{task.progress}%</span>
             </div>
-            <span className="text-sm text-muted-foreground">{task.progress}%</span>
-          </div>
+          )}
         </TableCell>
         <TableCell>
           {editingTask === task.task_id ? (
@@ -327,7 +338,6 @@ function TaskRow({
             onTaskUpdate={onTaskUpdate}
             onTaskDelete={onTaskDelete}
             onTaskAdd={onTaskAdd}
-            onTaskSelect={onTaskSelect}
             setEditValues={setEditValues}
             creatingTask={creatingTask}
             newTaskValues={newTaskValues}
@@ -432,7 +442,6 @@ export function HierarchicalWBSTable({
   onTaskUpdate,
   onTaskDelete,
   onTaskAdd,
-  onTaskSelect,
 }: HierarchicalWBSTableProps) {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Task>>({});
@@ -448,6 +457,18 @@ export function HierarchicalWBSTable({
     progress: 0,
     status: '할일',
   });
+
+  // 2. 모든 ID 수집 헬퍼 함수 (펼치기/접기용)
+  const getAllTaskIds = (nodes: Task[]): string[] => {
+    let ids: string[] = [];
+    nodes.forEach((node) => {
+      ids.push(node.task_id);
+      if (node.subtasks && node.subtasks.length > 0) {
+        ids = [...ids, ...getAllTaskIds(node.subtasks)];
+      }
+    });
+    return ids;
+  };
 
   const handleToggleExpand = (taskId: string) => {
     const newExpanded = new Set(expandedTasks);
@@ -527,7 +548,7 @@ export function HierarchicalWBSTable({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setExpandedTasks(new Set(tasks.map((t) => t.id)))}
+            onClick={() => setExpandedTasks(new Set(getAllTaskIds(tasks)))}
           >
             모두 펼치기
           </Button>
@@ -663,7 +684,6 @@ export function HierarchicalWBSTable({
                 onTaskUpdate={onTaskUpdate}
                 onTaskDelete={onTaskDelete}
                 onTaskAdd={onTaskAdd}
-                onTaskSelect={onTaskSelect}
                 setEditValues={setEditValues}
                 creatingTask={creatingTask}
                 newTaskValues={newTaskValues}

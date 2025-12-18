@@ -1,15 +1,16 @@
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { HierarchicalWBSTable } from './HierarchicalWbsTable';
-import { TaskDetailPanel } from '@/shared/components/project/TaskDetailPanel';
 import type { Task, BackendTask } from '@/shared/lib/apiTypes';
-import { useEffect } from 'react';
-import { useTaskStore } from '@/shared/stores/taskStore';
 import { WBSTableSkeleton } from '@/features/wbs/skeletons/WBSTableSkeleton';
-import { useTasks } from '@/shared/hooks/queries/useTaskQuery';
+import {
+  useTasks,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+} from '@/shared/hooks/queries/useTaskQuery';
 
 // 재귀적으로 작업 찾기 헬퍼 함수
 const findTaskRecursive = (tasks: Task[], taskId: string): Task | null => {
@@ -72,17 +73,9 @@ export function WBSTableView({ projectId: propProjectId }: WBSTableViewProps) {
   const params = useParams();
   const projectId = propProjectId || (params.id as string);
 
-  // Zustand Store Actions
-  const setTasks = useTaskStore((state) => state.setTasks);
-
-  const updateTask = useTaskStore((state) => state.updateTask);
-  const deleteTask = useTaskStore((state) => state.deleteTask);
-  const addTask = useTaskStore((state) => state.addTask);
-  const queryClient = useQueryClient();
-
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const createTaskMutation = useCreateTask(projectId);
+  const updateTaskMutation = useUpdateTask(projectId);
+  const deleteTaskMutation = useDeleteTask(projectId);
 
   const { data: rawTasks = [], isLoading } = useTasks(projectId);
 
@@ -91,28 +84,48 @@ export function WBSTableView({ projectId: propProjectId }: WBSTableViewProps) {
     return buildTaskTree(rawTasks);
   }, [rawTasks]);
 
-  const tasksFromStore = useTaskStore((state) => state.getTasks(projectId));
-
-  useEffect(() => {
-    if (initialTasks.length > 0) {
-      console.log(`[WBS] API 데이터 수신: ${initialTasks.length}건. 스토어 동기화 시도.`);
-      setTasks(projectId, initialTasks);
-    }
-  }, [initialTasks, projectId, setTasks]);
-
-  // 렌더링용 데이터: 스토어에 데이터가 있으면 스토어 데이터 사용, 없으면 API 초기 데이터 사용 (깜빡임 방지)
-  const tasks = tasksFromStore.length > 0 ? tasksFromStore : initialTasks;
+  // 렌더링용 데이터: API 데이터 사용
+  const tasks = initialTasks;
 
   // Store 액션 래퍼 함수들 및 이벤트 핸들러
   const handleTaskUpdate = (taskId: string, updates: Partial<Task>) => {
-    updateTask(projectId, taskId, updates);
+    // 4. 상태나 진행률 변경 시 값 동기화 로직
+    const newUpdates: any = { ...updates };
+
+    // 상태 변경 시: 한글 상태를 백엔드 Enum으로 변환하고 진행률 동기화
+    if (updates.status) {
+      let backendStatus = updates.status as string;
+      if (updates.status === '할일') backendStatus = 'TODO';
+      else if (updates.status === '진행중') backendStatus = 'IN_PROGRESS';
+      else if (updates.status === '완료') backendStatus = 'DONE';
+
+      newUpdates.status = backendStatus;
+
+      if (backendStatus === 'TODO') newUpdates.progress = 0;
+      else if (backendStatus === 'IN_PROGRESS') newUpdates.progress = 1;
+      else if (backendStatus === 'DONE') newUpdates.progress = 100;
+    }
+
+    // 진행률 변경 시: 상태 동기화
+    if (updates.progress !== undefined) {
+      if (updates.progress === 0) newUpdates.status = 'TODO';
+      else if (updates.progress === 100) newUpdates.status = 'DONE';
+      else newUpdates.status = 'IN_PROGRESS';
+    }
+
+    updateTaskMutation.mutate({ taskId: Number(taskId), updates: newUpdates });
   };
 
   const handleTaskDelete = (taskId: string) => {
-    deleteTask(projectId, taskId);
+    deleteTaskMutation.mutate(Number(taskId));
   };
 
   const handleTaskAdd = (parentId?: string, taskData?: Partial<Task>) => {
+    // 상태 매핑 (한글 -> 백엔드 Enum)
+    let backendStatus = 'TODO';
+    if (taskData?.status === '진행중') backendStatus = 'IN_PROGRESS';
+    else if (taskData?.status === '완료') backendStatus = 'DONE';
+
     const newTask: Task = {
       task_id: String(Date.now()), // 임시 ID 생성
       name: taskData?.name || '새 작업',
@@ -126,17 +139,13 @@ export function WBSTableView({ projectId: propProjectId }: WBSTableViewProps) {
       parent_id: parentId || null,
       ...taskData,
     };
-    addTask(projectId, newTask, parentId);
+    // API 호출 시에는 필요한 데이터만 전송 (ID는 백엔드 생성)
+    createTaskMutation.mutate({
+      ...newTask,
+      status: backendStatus,
+      parent: parentId ? Number(parentId) : undefined,
+    } as any);
   };
-
-  const handleTaskSelect = useCallback(
-    (taskId: string) => {
-      setSelectedTask(findTaskRecursive(tasks, taskId));
-      setSelectedTaskId(taskId);
-      setIsTaskDetailOpen(true);
-    },
-    [tasks]
-  );
 
   if (isLoading) {
     return <WBSTableSkeleton />;
@@ -149,14 +158,6 @@ export function WBSTableView({ projectId: propProjectId }: WBSTableViewProps) {
         onTaskUpdate={handleTaskUpdate}
         onTaskDelete={handleTaskDelete}
         onTaskAdd={handleTaskAdd}
-        onTaskSelect={handleTaskSelect}
-      />
-
-      <TaskDetailPanel
-        task={selectedTask}
-        isOpen={isTaskDetailOpen}
-        onClose={() => setIsTaskDetailOpen(false)}
-        onUpdate={handleTaskUpdate}
       />
     </>
   );
