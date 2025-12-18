@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Calendar, Users, MoreVertical, Eye, Edit, Trash2, FolderOpen } from 'lucide-react';
+import { Search, Calendar, Users, MoreVertical, Eye, Trash2, FolderOpen } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
@@ -29,6 +29,9 @@ interface ApiProject {
   endDate: string; // YYYY-MM-DD
   memberCount: number;
   updatedAt: string; // ISO string
+  team?: {
+    members: any[];
+  };
 }
 
 interface Project {
@@ -37,7 +40,7 @@ interface Project {
   description: string;
   startDate: string;
   endDate: string;
-  teamMembers: string[];
+  memberCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,7 +77,7 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
         description: p.projectType || '프로젝트 상세 정보 없음', // projectType을 설명으로 임시 사용
         startDate: p.startDate,
         endDate: p.endDate,
-        teamMembers: [`${p.memberCount}명 참여`], // memberCount를 팀원 정보로 사용
+        memberCount: p.team?.members?.length || p.memberCount || 1,
         createdAt: new Date(p.updatedAt).toISOString(), // 생성일 필드가 없으므로 updatedAt 사용
         updatedAt: p.updatedAt,
       }));
@@ -93,16 +96,15 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
   }, []);
 
   const handleDeleteProject = async (projectId: string) => {
-    // NOTE: `confirm()` 사용은 금지되어 있으므로, 직접 API 호출 및 상태 업데이트로 대체합니다.
-    console.log(
-      `[ACTION] Attempting to delete project ID: ${projectId}. (Confirmation skipped as per guidelines)`
-    );
+    if (!window.confirm('정말로 이 프로젝트를 삭제하시겠습니까?')) {
+      return;
+    }
 
     try {
-      const BASE_URL = '/api';
+      const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
       const token = localStorage.getItem('authToken');
 
-      const response = await fetch(`${BASE_URL}/projects/${projectId}`, {
+      const response = await fetch(`${BASE_URL}/api/projects/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +168,11 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
         {/* 프로젝트 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow">
+            <Card
+              key={project.id}
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => onSelectProject?.(project)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -177,7 +183,13 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {' '}
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -185,10 +197,6 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
                       <DropdownMenuItem onClick={() => onSelectProject?.(project)}>
                         <Eye className="h-4 w-4 mr-2" />
                         보기
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        편집
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
@@ -214,7 +222,7 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    <span>{project.teamMembers.length}명 참여</span>
+                    <span>{project.memberCount}명 참여</span>
                   </div>
                 </div>
               </CardContent>
