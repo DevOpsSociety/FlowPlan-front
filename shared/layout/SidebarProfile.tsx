@@ -1,14 +1,14 @@
 'use client';
 
+import { GoogleLoginButton, UserProfile } from '@/features/auth/components/GoogleLoginButton';
+import { cn } from '@/shared/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
-import { cn } from '@/shared/lib/utils';
 import { ChevronUp, LogOut, Settings, User } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GoogleLoginButton, UserProfile } from '@/features/auth/components/GoogleLoginButton';
+import { useEffect, useState } from 'react';
 
 interface SidebarProfileProps {
   collapsed: boolean;
@@ -227,12 +227,12 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
 
         {isOpen && (
           <div className="mt-1 space-y-1">
-            <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
+            {/* <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
               <Link href="/profile">
                 <User className="h-4 w-4" />
                 <span>프로필</span>
               </Link>
-            </Button>
+            </Button> */}
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 px-2"
@@ -244,7 +244,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
           </div>
         )}
       </div>
-
+      {/* 
       <div className="px-4 pb-4">
         <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
           <Link href="/settings">
@@ -252,7 +252,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
             <span>설정</span>
           </Link>
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }

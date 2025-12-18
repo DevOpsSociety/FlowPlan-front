@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { TooltipProvider } from '@/shared/ui/tooltip';
+import { mockProjects, type Project } from '@/shared/lib/mockData';
+import { getProjects } from '@/shared/lib/storage';
 import { cn } from '@/shared/lib/utils';
+import { TooltipProvider } from '@/shared/ui/tooltip';
+import { useEffect, useState } from 'react';
 import { SidebarHeader } from './SidebarHeader';
-import { SidebarProjectSelector } from './SidebarProjectSelector';
 import { SidebarNav } from './SidebarNav';
 import { SidebarProfile } from './SidebarProfile';
-import { getProjects } from '@/shared/lib/storage';
-import { mockProjects, type Project } from '@/shared/lib/mockData';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -54,11 +53,11 @@ export function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       >
         <div className="flex flex-col h-full">
           <SidebarHeader collapsed={collapsed} onToggle={onToggleCollapse} />
-          <SidebarProjectSelector
+          {/* <SidebarProjectSelector
             collapsed={collapsed}
             projects={projects}
             currentProjectId={currentProjectId}
-          />
+          /> */}
           <SidebarNav collapsed={collapsed} />
           <SidebarProfile collapsed={collapsed} />
         </div>

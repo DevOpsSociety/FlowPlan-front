@@ -1,10 +1,10 @@
 'use client';
 
-import { Save, Download, Users } from 'lucide-react';
-import { Button } from '@/shared/ui/button';
 import { useToast } from '@/shared/hooks/useToast';
-import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
 import type { Task } from '@/shared/lib/apiTypes';
+import { getCurrentProject, saveProject, type StoredProject } from '@/shared/lib/storage';
+import { Button } from '@/shared/ui/button';
+import { Users } from 'lucide-react';
 
 interface ProjectHeaderProps {
   project: any;
@@ -72,8 +72,8 @@ export function ProjectHeader({ project, wbsTasks, onShowTeam }: ProjectHeaderPr
           {project.memberCount}명 • {project.expectedDurationMonths}개월 예상 • AI 생성됨
         </p>
         <div className="flex items-center mt-2 text-xs text-muted-foreground">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          실시간 동기화 활성화
+          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>뷰 간 동기화
+          활성화
         </div>
       </div>
 
@@ -84,14 +84,14 @@ export function ProjectHeader({ project, wbsTasks, onShowTeam }: ProjectHeaderPr
           </Button>
         )}
 
-        <Button onClick={handleSaveProject}>
+        {/* <Button onClick={handleSaveProject}>
           <Save className="h-4 w-4 mr-2" />
           저장
         </Button>
         <Button variant="outline" onClick={handleExportProject}>
           <Download className="h-4 w-4 mr-2" />
           내보내기
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
