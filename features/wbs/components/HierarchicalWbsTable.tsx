@@ -7,10 +7,11 @@ import { Badge } from '@/shared/ui/badge';
 import { Input } from '@/shared/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import type { Task } from '@/shared/lib/apiTypes';
+import type { Task, TeamMember } from '@/shared/lib/apiTypes';
 
 interface HierarchicalWBSTableProps {
   tasks: Task[];
+  members: TeamMember[];
   onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
   onTaskDelete: (taskId: string) => void;
   onTaskAdd: (parentId?: string, taskData?: Partial<Task>) => void;
@@ -18,6 +19,7 @@ interface HierarchicalWBSTableProps {
 
 interface TaskRowProps {
   task: Task;
+  members: TeamMember[];
   depth: number;
   expandedTasks: Set<string>;
   onToggleExpand: (taskId: string) => void;
@@ -40,6 +42,7 @@ interface TaskRowProps {
 
 function TaskRow({
   task,
+  members,
   depth,
   expandedTasks,
   onToggleExpand,
@@ -78,6 +81,18 @@ function TaskRow({
     return `${days}일`;
   };
 
+  // 현재 담당자 값(이름 또는 이메일)을 이메일로 변환하는 헬퍼 함수
+  const getAssigneeValue = (val: string | undefined) => {
+    if (!val) return '';
+    // 1. 이미 이메일인 경우 (수정 중)
+    const byEmail = members.find((m) => m.email === val);
+    if (byEmail) return byEmail.email;
+    // 2. 이름인 경우 (초기 상태) -> 이메일로 변환
+    const byName = members.find((m) => m.name === val);
+    if (byName) return byName.email;
+    return '';
+  };
+
   return (
     <>
       <TableRow className="hover:bg-muted/50">
@@ -114,11 +129,21 @@ function TaskRow({
         </TableCell>
         <TableCell>
           {editingTask === task.task_id ? (
-            <Input
-              value={editValues.assignee || ''}
-              onChange={(e) => setEditValues({ ...editValues, assignee: e.target.value })}
-              className="h-8"
-            />
+            <Select
+              value={getAssigneeValue(editValues.assignee)}
+              onValueChange={(value) => setEditValues({ ...editValues, assignee: value })}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="담당자" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((member) => (
+                  <SelectItem key={member.id} value={member.email}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : (
             task.assignee
           )}
@@ -249,12 +274,21 @@ function TaskRow({
             </div>
           </TableCell>
           <TableCell>
-            <Input
+            <Select
               value={newTaskValues.assignee || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, assignee: e.target.value })}
-              placeholder="담당자"
-              className="h-8"
-            />
+              onValueChange={(value) => setNewTaskValues({ ...newTaskValues, assignee: value })}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="담당자" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((member) => (
+                  <SelectItem key={member.id} value={member.email}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </TableCell>
           <TableCell>
             <Input
@@ -327,6 +361,7 @@ function TaskRow({
           <TaskRow
             key={subTask.task_id}
             task={subTask}
+            members={members}
             depth={depth + 1}
             expandedTasks={expandedTasks}
             onToggleExpand={onToggleExpand}
@@ -362,12 +397,21 @@ function TaskRow({
             </div>
           </TableCell>
           <TableCell>
-            <Input
+            <Select
               value={newTaskValues.assignee || ''}
-              onChange={(e) => setNewTaskValues({ ...newTaskValues, assignee: e.target.value })}
-              placeholder="담당자"
-              className="h-8"
-            />
+              onValueChange={(value) => setNewTaskValues({ ...newTaskValues, assignee: value })}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="담당자" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map((member) => (
+                  <SelectItem key={member.id} value={member.email}>
+                    {member.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </TableCell>
           <TableCell>
             <Input
@@ -439,6 +483,7 @@ function TaskRow({
 
 export function HierarchicalWBSTable({
   tasks,
+  members,
   onTaskUpdate,
   onTaskDelete,
   onTaskAdd,
@@ -591,14 +636,23 @@ export function HierarchicalWBSTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Input
+                  <Select
                     value={newTaskValues.assignee || ''}
-                    onChange={(e) =>
-                      setNewTaskValues({ ...newTaskValues, assignee: e.target.value })
+                    onValueChange={(value) =>
+                      setNewTaskValues({ ...newTaskValues, assignee: value })
                     }
-                    placeholder="담당자"
-                    className="h-8"
-                  />
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="담당자" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((member) => (
+                        <SelectItem key={member.id} value={member.email}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>
                   <Input
@@ -673,6 +727,7 @@ export function HierarchicalWBSTable({
               <TaskRow
                 key={task.task_id}
                 task={task}
+                members={members}
                 depth={0}
                 expandedTasks={expandedTasks}
                 onToggleExpand={handleToggleExpand}

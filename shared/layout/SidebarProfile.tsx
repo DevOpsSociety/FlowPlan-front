@@ -63,6 +63,10 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
     localStorage.setItem('user', JSON.stringify(loggedInUser));
     setIsAuthenticated(true);
     setUser(loggedInUser);
+
+    // 로그인 성공 이벤트 발생 (프로젝트 목록 갱신용)
+    window.dispatchEvent(new Event('auth-change'));
+
     router.refresh();
   };
 
@@ -81,22 +85,6 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
               onLoginError={handleLoginError}
             />
           </div>
-          {/* 
-          <div className="px-4 pb-4">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-full" asChild>
-                    <Link href="/settings">
-                      <Settings className="h-4 w-4" />
-                      <span className="sr-only">설정</span>
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">설정</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div> */}
         </div>
       );
     }
@@ -156,22 +144,6 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
             </div>
           )}
         </div>
-        {/* 
-        <div className="px-4 pb-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="w-full" asChild>
-                  <Link href="/settings">
-                    <Settings className="h-4 w-4" />
-                    <span className="sr-only">설정</span>
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">설정</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div> */}
       </div>
     );
   }
@@ -187,15 +159,6 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
             onLoginError={handleLoginError}
           />
         </div>
-
-        {/* <div className="px-4 pb-4">
-          <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
-            <Link href="/settings">
-              <Settings className="h-4 w-4" />
-              <span>설정</span>
-            </Link>
-          </Button>
-        </div> */}
       </div>
     );
   }
@@ -227,12 +190,6 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
 
         {isOpen && (
           <div className="mt-1 space-y-1">
-            {/* <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
-              <Link href="/profile">
-                <User className="h-4 w-4" />
-                <span>프로필</span>
-              </Link>
-            </Button> */}
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 px-2"
@@ -244,15 +201,6 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
           </div>
         )}
       </div>
-      {/* 
-      <div className="px-4 pb-4">
-        <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
-          <Link href="/settings">
-            <Settings className="h-4 w-4" />
-            <span>설정</span>
-          </Link>
-        </Button>
-      </div> */}
     </div>
   );
 }
