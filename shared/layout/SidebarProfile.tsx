@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
-import { ChevronUp, LogOut, Settings, User } from 'lucide-react';
+import { ChevronUp, LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -81,7 +81,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
               onLoginError={handleLoginError}
             />
           </div>
-
+          {/* 
           <div className="px-4 pb-4">
             <TooltipProvider>
               <Tooltip>
@@ -96,7 +96,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
                 <TooltipContent side="right">설정</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          </div>
+          </div> */}
         </div>
       );
     }
@@ -156,7 +156,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
             </div>
           )}
         </div>
-
+        {/* 
         <div className="px-4 pb-4">
           <TooltipProvider>
             <Tooltip>
@@ -171,7 +171,7 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
               <TooltipContent side="right">설정</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
+        </div> */}
       </div>
     );
   }
@@ -188,14 +188,14 @@ export function SidebarProfile({ collapsed }: SidebarProfileProps) {
           />
         </div>
 
-        <div className="px-4 pb-4">
+        {/* <div className="px-4 pb-4">
           <Button variant="ghost" className="w-full justify-start gap-3 px-2" asChild>
             <Link href="/settings">
               <Settings className="h-4 w-4" />
               <span>설정</span>
             </Link>
           </Button>
-        </div>
+        </div> */}
       </div>
     );
   }
