@@ -329,12 +329,21 @@ class ApiService {
 
   // 팀 관리 관련
   async getTeamMembers(projectId: string): Promise<TeamMember[]> {
-    const mockTeamMembersData = await import('./collaborationMockData');
+    const endpoint = `/api/projects/${projectId}/members`;
+    const response = await this.request<any[]>(endpoint);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    return mockTeamMembersData.mockTeamMembers;
+    if (response.success && response.data) {
+      return response.data.map((m: any) => ({
+        id: String(m.userId),
+        name: m.userName,
+        email: m.userEmail,
+        role: m.role === 'OWNER' ? 'owner' : m.role === 'EDITOR' ? 'member' : 'viewer',
+        status: 'active',
+        createdAt: m.joinedAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+    }
+    return [];
   }
 
   async inviteTeamMember(projectId: string, email: string, role: UserRole): Promise<void> {

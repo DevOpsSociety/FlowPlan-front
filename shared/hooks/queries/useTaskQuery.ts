@@ -31,6 +31,7 @@ export const useProjectWithTasks = (projectId: string) => {
     queryKey: ['projectWithTasks', projectId],
     queryFn: async () => {
       const response = await fetchTasks(projectId);
+
       return {
         project: {
           id: response.projectId,

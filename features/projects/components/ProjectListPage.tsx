@@ -93,6 +93,11 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
 
   useEffect(() => {
     loadProjects();
+
+    // 로그인/로그아웃 이벤트 감지하여 목록 새로고침
+    const handleAuthChange = () => loadProjects();
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
   }, []);
 
   const handleDeleteProject = async (projectId: string) => {
@@ -200,7 +205,10 @@ export function ProjectListPage({ onBack, onSelectProject }: ProjectListPageProp
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
-                        onClick={() => handleDeleteProject(project.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // 클릭 이벤트 전파 방지 (상세 페이지 이동 막기)
+                          handleDeleteProject(project.id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         삭제
